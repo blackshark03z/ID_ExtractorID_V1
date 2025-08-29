@@ -34,7 +34,24 @@ Hệ thống trích xuất thông tin từ CCCD (Căn cước công dân) sử d
 pip install -r requirements.txt
 ```
 
-### Cấu hình API keys
+### Thiết lập tự động (Khuyến nghị)
+```bash
+python setup.py
+```
+Script này sẽ tự động:
+- Tạo các thư mục cần thiết
+- Tạo file `api_keys.txt` mẫu
+- Tạo các file cấu hình tùy chọn
+
+### Thiết lập thủ công
+#### Tạo thư mục
+```bash
+mkdir Input_file
+mkdir extracted_all
+mkdir Excel
+```
+
+#### Cấu hình API keys
 1. Tạo file `api_keys.txt`
 2. Thêm các Gemini API keys (mỗi key một dòng)
 3. Ví dụ:
@@ -45,10 +62,29 @@ AIzaSyB1234567890abcdefghijklmnop
 
 ## 📁 Cấu trúc thư mục
 
+### Cấu trúc sau khi clone (ban đầu)
 ```
-ID Extract/
+ID_Extractor/
 ├── extract_gemini.py          # Script chính (command line)
 ├── extract_gui.py             # Giao diện GUI
+├── setup.py                   # Script thiết lập tự động
+├── create_api_keys.py         # Tạo API keys tự động
+├── test_proxy.py              # Test proxy
+├── test_checkpoint.py         # Test checkpoint system
+├── requirements.txt           # Dependencies
+├── README.md                 # Hướng dẫn sử dụng
+├── README_API_KEYS.md        # Hướng dẫn tạo API keys
+├── README_CHECKPOINT.md      # Hướng dẫn checkpoint
+├── LICENSE                   # MIT License
+└── .gitignore               # Git ignore rules
+```
+
+### Cấu trúc sau khi thiết lập
+```
+ID_Extractor/
+├── extract_gemini.py          # Script chính (command line)
+├── extract_gui.py             # Giao diện GUI
+├── setup.py                   # Script thiết lập tự động
 ├── create_api_keys.py         # Tạo API keys tự động
 ├── test_proxy.py              # Test proxy
 ├── test_checkpoint.py         # Test checkpoint system
@@ -59,19 +95,70 @@ ID Extract/
 ├── README.md                 # Hướng dẫn sử dụng
 ├── README_API_KEYS.md        # Hướng dẫn tạo API keys
 ├── README_CHECKPOINT.md      # Hướng dẫn checkpoint
+├── LICENSE                   # MIT License
+├── .gitignore               # Git ignore rules
 ├── Input_file/               # Thư mục chứa file ZIP đầu vào
+│   ├── Test.zip
+│   ├── Tenchuan.zip
+│   └── ...
 ├── extracted_all/            # Thư mục chứa dữ liệu đã giải nén
+│   ├── Test/
+│   │   ├── AN CHI THANH/
+│   │   └── BON VAN CHANH/
+│   └── Tenchuan/
 └── Excel/                    # Thư mục chứa file Excel kết quả
+    ├── cccd_data_Test.xlsx
+    └── cccd_data_Tenchuan.xlsx
 ```
 
 ## 🎯 Cách sử dụng
 
-### Sử dụng GUI (Khuyến nghị)
+### 1. Thiết lập ban đầu
+
+#### Tạo cấu trúc thư mục
+Sau khi clone project, tạo các thư mục cần thiết:
+
+```bash
+# Tạo thư mục chứa file ZIP đầu vào
+mkdir Input_file
+
+# Tạo thư mục chứa dữ liệu đã giải nén
+mkdir extracted_all
+
+# Tạo thư mục chứa file Excel kết quả
+mkdir Excel
+```
+
+#### Cấu hình API keys
+1. Tạo file `api_keys.txt` trong thư mục gốc
+2. Thêm các Gemini API keys (mỗi key một dòng):
+```
+AIzaSyDzvw-vLXTOy0GoSx3Z8K_xyXUksO-wesQ
+AIzaSyB1234567890abcdefghijklmnop
+```
+
+#### Chuẩn bị dữ liệu
+1. Đặt file ZIP chứa ảnh CCCD vào thư mục `Input_file/`
+2. Cấu trúc file ZIP:
+   ```
+   Tenchuan.zip
+   ├── AN CHI THANH/
+   │   ├── CHÍ THANH-1.jpg
+   │   └── CHÍ THANH-2.jpg
+   ├── BON VAN CHANH/
+   │   ├── 5953325 bồn văn chanh cccd-1.jpg
+   │   └── 5953325 bồn văn chanh cccd-2.jpg
+   └── ...
+   ```
+
+### 2. Chạy chương trình
+
+#### Sử dụng GUI (Khuyến nghị)
 ```bash
 python extract_gui.py
 ```
 
-### Sử dụng Command Line
+#### Sử dụng Command Line
 ```bash
 python extract_gemini.py
 ```
@@ -109,6 +196,14 @@ Trong GUI, tích vào checkbox "Use Checkpoint" để lưu tiến độ
 
 ## 🔧 Troubleshooting
 
+### Lỗi "Thư mục không tồn tại"
+- Đảm bảo đã tạo các thư mục: `Input_file/`, `extracted_all/`, `Excel/`
+- Chạy lệnh tạo thư mục như hướng dẫn ở trên
+
+### Lỗi "Không tìm thấy file ZIP"
+- Đặt file ZIP vào thư mục `Input_file/`
+- Kiểm tra tên file và định dạng (.zip)
+
 ### Lỗi API quota
 - Thêm nhiều API keys vào `api_keys.txt`
 - Sử dụng `create_api_keys.py` để tạo keys tự động
@@ -120,6 +215,10 @@ Trong GUI, tích vào checkbox "Use Checkpoint" để lưu tiến độ
 ### Lỗi kết nối
 - Kiểm tra internet connection
 - Thử lại sau vài phút
+
+### Lỗi "Permission denied"
+- Đảm bảo có quyền ghi vào thư mục
+- Chạy với quyền administrator nếu cần
 
 ## 📊 Kết quả
 
