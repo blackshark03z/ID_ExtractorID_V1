@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+temp_image_*.jpg
+checkpoint.json
+*.log
+
+# API keys (security)
+api_keys.txt
+gmail_list.txt
+proxy_list.txt
+working_proxies.txt
+
+# Extracted data (large files)
+extracted_all/
+Excel/
+Input_file/
+
+# Test files
+test_*.py 
