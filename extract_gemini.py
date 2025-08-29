@@ -185,6 +185,8 @@ def export_temp_excel(rows, zip_path, reason="TEMP"):
 
 def handle_all_keys_exhausted(rows=None, zip_path=None):
     """Xử lý khi tất cả API keys hết quota"""
+    global api_keys_list
+    
     print("\n" + "="*60)
     print("🚨 TẤT CẢ API KEYS ĐÃ HẾT QUOTA!")
     print("="*60)
@@ -221,7 +223,6 @@ def handle_all_keys_exhausted(rows=None, zip_path=None):
             print("💡 Sau khi thêm, nhấn Enter để tiếp tục...")
             input()
             # Reload API keys
-            global api_keys_list
             api_keys_list = load_api_keys()
             reset_exhausted_keys()
             return "retry"
@@ -233,7 +234,6 @@ def handle_all_keys_exhausted(rows=None, zip_path=None):
                 subprocess.run(["python", "create_api_keys.py"], check=True)
                 print("✅ Đã tạo API keys mới")
                 # Reload API keys
-                global api_keys_list
                 api_keys_list = load_api_keys()
                 reset_exhausted_keys()
                 return "retry"
@@ -254,6 +254,8 @@ def handle_all_keys_exhausted(rows=None, zip_path=None):
 # ---- Hàm lấy API key hiện tại ----
 def get_current_api_key():
     """Lấy API key hiện tại"""
+    global current_key_index
+    
     if not api_keys_list:
         return None
     
@@ -262,7 +264,6 @@ def get_current_api_key():
         # Tìm key khả dụng tiếp theo
         for i in range(len(api_keys_list)):
             if i not in exhausted_keys:
-                global current_key_index
                 current_key_index = i
                 break
         else:
