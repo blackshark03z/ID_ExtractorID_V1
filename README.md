@@ -12,6 +12,7 @@ Hệ thống trích xuất thông tin từ CCCD (Căn cước công dân) sử d
   - Tự động chuyển đổi API keys khi hết quota
   - Theo dõi trạng thái keys khả dụng
   - Xử lý thông minh khi tất cả keys hết quota
+  - **Xuất Excel tạm thời**: Tự động xuất dữ liệu đã xử lý khi gặp lỗi
 - **Validation dữ liệu**: Kiểm tra và cảnh báo số CCCD không hợp lệ
 - **Xuất Excel**: Tự động xuất kết quả ra file Excel
 
@@ -216,6 +217,7 @@ Trong GUI, tích vào checkbox "Use Checkpoint" để lưu tiến độ
 - Thêm nhiều API keys vào `api_keys.txt`
 - Sử dụng `create_api_keys.py` để tạo keys tự động
 - Hệ thống tự động chuyển đổi API keys khi hết quota
+- **Xuất Excel tạm thời**: Khi hết quota, hệ thống sẽ tự động xuất Excel cho dữ liệu đã xử lý
 - Khi tất cả keys hết quota, có 5 tùy chọn xử lý:
   1. Chờ reset quota (00:00 UTC)
   2. Thêm API keys mới

@@ -141,11 +141,58 @@ def show_api_keys_status():
     else:
         print(f"   ✅ Đủ keys để tiếp tục")
 
-def handle_all_keys_exhausted():
+def export_temp_excel(rows, zip_path, reason="TEMP"):
+    """Xuất Excel tạm thời"""
+    if not rows or len(rows) == 0:
+        return
+    
+    print(f"\n📊 Đã trích xuất được {len(rows)} bản ghi")
+    print(f"💾 Xuất Excel tạm thời ({reason})...")
+    
+    try:
+        df = pd.DataFrame(rows)
+        # Sắp xếp cột theo thứ tự mong muốn
+        columns_order = ["CCCD", "HoTen", "NgaySinh", "GioiTinh", "DiaChi", "NoiCap", "NgayCap", "NgayHetHan"]
+        df = df.reindex(columns=columns_order)
+        
+        # Tạo tên file Excel tạm thời
+        zip_name = os.path.splitext(os.path.basename(zip_path))[0] if zip_path else "temp"
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        # Tạo folder Excel nếu chưa có
+        excel_dir = os.path.join(os.path.dirname(os.path.dirname(zip_path)), "Excel") if zip_path else "Excel"
+        if not os.path.exists(excel_dir):
+            os.makedirs(excel_dir)
+        
+        excel_path = os.path.join(excel_dir, f"cccd_data_{zip_name}_{reason}_{timestamp}.xlsx")
+        df.to_excel(excel_path, index=False)
+        print(f"✅ Đã xuất Excel tạm thời: {excel_path}")
+        
+        # Hiển thị thống kê
+        print(f"\n📊 Thống kê tạm thời:")
+        print(f"- Tổng số bản ghi: {len(rows)}")
+        print(f"- Có CCCD: {df['CCCD'].notna().sum()}")
+        print(f"- Có họ tên: {df['HoTen'].notna().sum()}")
+        print(f"- Có ngày sinh: {df['NgaySinh'].notna().sum()}")
+        print(f"- Có giới tính: {df['GioiTinh'].notna().sum()}")
+        print(f"- Có địa chỉ: {df['DiaChi'].notna().sum()}")
+        print(f"- Có nơi cấp: {df['NoiCap'].notna().sum()}")
+        print(f"- Có ngày cấp: {df['NgayCap'].notna().sum()}")
+        print(f"- Có ngày hết hạn: {df['NgayHetHan'].notna().sum()}")
+        
+    except Exception as e:
+        print(f"❌ Lỗi xuất Excel tạm thời: {e}")
+
+def handle_all_keys_exhausted(rows=None, zip_path=None):
     """Xử lý khi tất cả API keys hết quota"""
     print("\n" + "="*60)
     print("🚨 TẤT CẢ API KEYS ĐÃ HẾT QUOTA!")
     print("="*60)
+    
+    # Xuất Excel tạm thời nếu có dữ liệu
+    if rows and len(rows) > 0:
+        export_temp_excel(rows, zip_path, "QUOTA_EXHAUSTED")
+    
     print("\n📋 Các tùy chọn xử lý:")
     print("1. 🔄 Chờ reset quota (thường vào 00:00 UTC)")
     print("2. ➕ Thêm API keys mới vào file api_keys.txt")
@@ -293,7 +340,7 @@ def extract_info_with_gemini(image_paths):
                 print("  ❌ Không có API key nào khả dụng")
                 print(f"  📊 Trạng thái: {len(exhausted_keys)}/{len(api_keys_list)} keys đã hết quota")
                 
-                # Xử lý khi tất cả keys hết quota
+                # Xử lý khi tất cả keys hết quota (không có dữ liệu để xuất Excel)
                 action = handle_all_keys_exhausted()
                 if action == "retry":
                     continue  # Thử lại với keys mới
@@ -315,7 +362,7 @@ def extract_info_with_gemini(image_paths):
                     elif response.status_code == 429:
                         print(f"  ⚠️  API key {current_key_index + 1} hết quota")
                         if not switch_to_next_api_key():
-                            # Tất cả keys đã hết quota
+                            # Tất cả keys đã hết quota (không có dữ liệu để xuất Excel)
                             action = handle_all_keys_exhausted()
                             if action == "retry":
                                 break  # Thử lại với keys mới
@@ -336,7 +383,7 @@ def extract_info_with_gemini(image_paths):
                         continue
                     else:
                         if not switch_to_next_api_key():
-                            # Tất cả keys đã hết quota
+                            # Tất cả keys đã hết quota (không có dữ liệu để xuất Excel)
                             action = handle_all_keys_exhausted()
                             if action == "retry":
                                 break  # Thử lại với keys mới
@@ -658,10 +705,16 @@ def main():
                 action = info.get("action")
                 if action == "save_and_exit":
                     print(f"\n💾 Lưu tiến độ và thoát...")
+                    # Xuất Excel tạm thời trước khi thoát
+                    if rows and len(rows) > 0:
+                        export_temp_excel(rows, zip_path, "SAVE_EXIT")
                     save_checkpoint(processed_folders, zip_path)
                     return
                 elif action == "pause":
                     print(f"\n⏸️  Tạm dừng xử lý...")
+                    # Xuất Excel tạm thời trước khi tạm dừng
+                    if rows and len(rows) > 0:
+                        export_temp_excel(rows, zip_path, "PAUSE")
                     save_checkpoint(processed_folders, zip_path)
                     print(f"💡 Để tiếp tục, chạy lại script với cùng file zip.")
                     return
@@ -709,11 +762,19 @@ def main():
         
     except KeyboardInterrupt:
         print(f"\n⚠️  Đã dừng xử lý. Tiến độ đã được lưu.")
+        # Xuất Excel tạm thời nếu có dữ liệu
+        if rows and len(rows) > 0:
+            print(f"💾 Xuất Excel tạm thời cho {len(rows)} bản ghi đã xử lý...")
+            export_temp_excel(rows, zip_path, "INTERRUPT")
         print(f"💡 Để tiếp tục, chạy lại script với cùng file zip.")
         return
     except Exception as e:
         print(f"\n❌ Lỗi: {e}")
         print(f"💾 Tiến độ đã được lưu. Có thể tiếp tục sau.")
+        # Xuất Excel tạm thời nếu có dữ liệu
+        if rows and len(rows) > 0:
+            print(f"💾 Xuất Excel tạm thời cho {len(rows)} bản ghi đã xử lý...")
+            export_temp_excel(rows, zip_path, "ERROR")
         return
     
     # Xuất Excel
