@@ -41,6 +41,7 @@ def load_api_keys():
 # ---- Biến global cho API keys ----
 api_keys_list = load_api_keys()
 current_key_index = 0
+exhausted_keys = set()  # Theo dõi các key đã hết quota
 
 # ---- Cấu hình đường dẫn ----
 # Người dùng sẽ nhập file zip đầu vào
@@ -95,15 +96,132 @@ def extract_images_from_pdf(pdf_path):
 # ---- Hàm thay đổi API key ----
 def switch_to_next_api_key():
     """Chuyển sang API key tiếp theo"""
-    global current_key_index
-    current_key_index = (current_key_index + 1) % len(api_keys_list)
-    print(f"🔄 Chuyển sang API key {current_key_index + 1}/{len(api_keys_list)}")
+    global current_key_index, exhausted_keys
+    
+    # Đánh dấu key hiện tại đã hết quota
+    exhausted_keys.add(current_key_index)
+    
+    # Tìm key tiếp theo chưa hết quota
+    original_index = current_key_index
+    for _ in range(len(api_keys_list)):
+        current_key_index = (current_key_index + 1) % len(api_keys_list)
+        if current_key_index not in exhausted_keys:
+            print(f"🔄 Chuyển sang API key {current_key_index + 1}/{len(api_keys_list)}")
+            return True
+    
+    # Nếu tất cả keys đã hết quota
+    print(f"❌ Tất cả {len(api_keys_list)} API keys đã hết quota!")
+    return False
+
+def reset_exhausted_keys():
+    """Reset danh sách keys đã hết quota (có thể do reset quota hàng ngày)"""
+    global exhausted_keys
+    exhausted_keys.clear()
+    print("🔄 Reset danh sách keys đã hết quota")
+
+def get_available_keys_count():
+    """Lấy số lượng keys còn khả dụng"""
+    return len(api_keys_list) - len(exhausted_keys)
+
+def show_api_keys_status():
+    """Hiển thị trạng thái API keys"""
+    total_keys = len(api_keys_list)
+    available_keys = get_available_keys_count()
+    exhausted_count = len(exhausted_keys)
+    
+    print(f"\n🔑 Trạng thái API Keys:")
+    print(f"   📊 Tổng số: {total_keys}")
+    print(f"   ✅ Khả dụng: {available_keys}")
+    print(f"   ❌ Hết quota: {exhausted_count}")
+    
+    if available_keys == 0:
+        print(f"   ⚠️  TẤT CẢ KEYS ĐÃ HẾT QUOTA!")
+    elif available_keys <= total_keys * 0.2:  # Còn ít hơn 20%
+        print(f"   ⚠️  Còn ít keys khả dụng ({available_keys}/{total_keys})")
+    else:
+        print(f"   ✅ Đủ keys để tiếp tục")
+
+def handle_all_keys_exhausted():
+    """Xử lý khi tất cả API keys hết quota"""
+    print("\n" + "="*60)
+    print("🚨 TẤT CẢ API KEYS ĐÃ HẾT QUOTA!")
+    print("="*60)
+    print("\n📋 Các tùy chọn xử lý:")
+    print("1. 🔄 Chờ reset quota (thường vào 00:00 UTC)")
+    print("2. ➕ Thêm API keys mới vào file api_keys.txt")
+    print("3. 🤖 Tạo API keys tự động bằng create_api_keys.py")
+    print("4. 💾 Lưu tiến độ hiện tại và thoát")
+    print("5. ⏸️  Tạm dừng và thử lại sau")
+    
+    while True:
+        choice = input("\n🎯 Chọn tùy chọn (1-5): ").strip()
+        
+        if choice == "1":
+            print("⏰ Chờ reset quota...")
+            print("💡 Thời gian reset thường là 00:00 UTC (07:00 VN)")
+            wait_time = input("⏱️  Nhập số phút chờ (Enter để chờ 60 phút): ").strip()
+            try:
+                wait_minutes = int(wait_time) if wait_time else 60
+                print(f"⏳ Chờ {wait_minutes} phút...")
+                time.sleep(wait_minutes * 60)
+                reset_exhausted_keys()
+                return "retry"
+            except ValueError:
+                print("❌ Số phút không hợp lệ")
+        
+        elif choice == "2":
+            print("📝 Vui lòng thêm API keys mới vào file api_keys.txt")
+            print("💡 Sau khi thêm, nhấn Enter để tiếp tục...")
+            input()
+            # Reload API keys
+            global api_keys_list
+            api_keys_list = load_api_keys()
+            reset_exhausted_keys()
+            return "retry"
+        
+        elif choice == "3":
+            print("🤖 Chạy script tạo API keys tự động...")
+            try:
+                import subprocess
+                subprocess.run(["python", "create_api_keys.py"], check=True)
+                print("✅ Đã tạo API keys mới")
+                # Reload API keys
+                global api_keys_list
+                api_keys_list = load_api_keys()
+                reset_exhausted_keys()
+                return "retry"
+            except Exception as e:
+                print(f"❌ Lỗi tạo API keys: {e}")
+        
+        elif choice == "4":
+            print("💾 Lưu tiến độ và thoát...")
+            return "save_and_exit"
+        
+        elif choice == "5":
+            print("⏸️  Tạm dừng xử lý...")
+            return "pause"
+        
+        else:
+            print("❌ Lựa chọn không hợp lệ, vui lòng chọn 1-5")
 
 # ---- Hàm lấy API key hiện tại ----
 def get_current_api_key():
     """Lấy API key hiện tại"""
     if not api_keys_list:
         return None
+    
+    # Kiểm tra xem key hiện tại có bị hết quota không
+    if current_key_index in exhausted_keys:
+        # Tìm key khả dụng tiếp theo
+        for i in range(len(api_keys_list)):
+            if i not in exhausted_keys:
+                global current_key_index
+                current_key_index = i
+                break
+        else:
+            # Không có key nào khả dụng
+            return None
+    
     return api_keys_list[current_key_index]
 
 # ---- Hàm gọi Gemini API ----
@@ -168,13 +286,23 @@ def extract_info_with_gemini(image_paths):
         
         # Thêm retry logic cho lỗi quota với thay đổi API key
         max_retries_per_key = 2
-        max_key_switches = len(api_keys_list)
         
-        for key_switch in range(max_key_switches):
+        while True:
             current_key = get_current_api_key()
             if not current_key:
                 print("  ❌ Không có API key nào khả dụng")
-                return {}
+                print(f"  📊 Trạng thái: {len(exhausted_keys)}/{len(api_keys_list)} keys đã hết quota")
+                
+                # Xử lý khi tất cả keys hết quota
+                action = handle_all_keys_exhausted()
+                if action == "retry":
+                    continue  # Thử lại với keys mới
+                elif action == "save_and_exit":
+                    return {"error": "all_keys_exhausted", "action": "save_and_exit"}
+                elif action == "pause":
+                    return {"error": "all_keys_exhausted", "action": "pause"}
+                else:
+                    return {}
             
             url = f"{GEMINI_API_URL}?key={current_key}"
             
@@ -186,12 +314,18 @@ def extract_info_with_gemini(image_paths):
                         return process_response(response)
                     elif response.status_code == 429:
                         print(f"  ⚠️  API key {current_key_index + 1} hết quota")
-                        if key_switch < max_key_switches - 1:
-                            switch_to_next_api_key()
-                            break  # Thử key mới
-                        else:
-                            print(f"  ❌ Tất cả API keys đã hết quota")
-                            return {}
+                        if not switch_to_next_api_key():
+                            # Tất cả keys đã hết quota
+                            action = handle_all_keys_exhausted()
+                            if action == "retry":
+                                break  # Thử lại với keys mới
+                            elif action == "save_and_exit":
+                                return {"error": "all_keys_exhausted", "action": "save_and_exit"}
+                            elif action == "pause":
+                                return {"error": "all_keys_exhausted", "action": "pause"}
+                            else:
+                                return {}
+                        break  # Thử key mới
                     else:
                         print(f"  ❌ Lỗi API: {response.status_code}")
                         break
@@ -201,13 +335,18 @@ def extract_info_with_gemini(image_paths):
                         time.sleep(30)
                         continue
                     else:
-                        if key_switch < max_key_switches - 1:
-                            switch_to_next_api_key()
-                            break
-                        else:
-                            return {}
-        
-        return {}
+                        if not switch_to_next_api_key():
+                            # Tất cả keys đã hết quota
+                            action = handle_all_keys_exhausted()
+                            if action == "retry":
+                                break  # Thử lại với keys mới
+                            elif action == "save_and_exit":
+                                return {"error": "all_keys_exhausted", "action": "save_and_exit"}
+                            elif action == "pause":
+                                return {"error": "all_keys_exhausted", "action": "pause"}
+                            else:
+                                return {}
+                        break
             
     except Exception as e:
         print(f"Lỗi gọi Gemini API: {e}")
@@ -328,6 +467,10 @@ def process_cccd_folder(folder_path):
         # Gọi Gemini API
         info = extract_info_with_gemini(images_to_process)
         
+        # Kiểm tra xem có phải lỗi hết quota không
+        if isinstance(info, dict) and info.get("error") == "all_keys_exhausted":
+            return info  # Trả về lỗi để xử lý ở cấp cao hơn
+        
         # Nếu thành công, trả về kết quả
         if info and any(info.values()):
             return info
@@ -434,6 +577,9 @@ def main():
     print(f"📦 File zip: {zip_path}")
     print(f"📁 Thư mục extract: {extract_dir}")
     
+    # Hiển thị trạng thái API keys
+    show_api_keys_status()
+    
     if TEST_MODE:
         print("⚠️  CHẠY Ở CHẾ ĐỘ TEST - Chỉ xử lý 2 folder đầu tiên")
     
@@ -507,6 +653,22 @@ def main():
             
             info = process_cccd_folder(folder_path)
             
+            # Kiểm tra xem có phải lỗi hết quota không
+            if isinstance(info, dict) and info.get("error") == "all_keys_exhausted":
+                action = info.get("action")
+                if action == "save_and_exit":
+                    print(f"\n💾 Lưu tiến độ và thoát...")
+                    save_checkpoint(processed_folders, zip_path)
+                    return
+                elif action == "pause":
+                    print(f"\n⏸️  Tạm dừng xử lý...")
+                    save_checkpoint(processed_folders, zip_path)
+                    print(f"💡 Để tiếp tục, chạy lại script với cùng file zip.")
+                    return
+                else:
+                    # Thử lại với keys mới
+                    continue
+            
             if info and any(info.values()):
                 # Kiểm tra CCCD có hết hạn không
                 if 'NgayHetHan' in info and info['NgayHetHan']:
@@ -533,6 +695,10 @@ def main():
             # Lưu checkpoint sau mỗi folder
             processed_folders.append(folder_path)
             save_checkpoint(processed_folders, zip_path)
+            
+            # Hiển thị trạng thái API keys mỗi 10 folder
+            if (i + 1) % 10 == 0:
+                show_api_keys_status()
             
             # Delay nhỏ để tránh rate limit
             if i < len(all_person_folders) - 1:

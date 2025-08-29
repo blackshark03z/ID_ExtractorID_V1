@@ -8,7 +8,10 @@ Hệ thống trích xuất thông tin từ CCCD (Căn cước công dân) sử d
 - **Xử lý đa định dạng**: Hỗ trợ ảnh JPG, PNG, PDF
 - **Giao diện GUI**: Giao diện đồ họa thân thiện với người dùng
 - **Hệ thống checkpoint**: Tự động lưu và khôi phục tiến độ xử lý
-- **Quản lý API keys**: Tự động chuyển đổi API keys khi hết quota
+- **Quản lý API keys thông minh**: 
+  - Tự động chuyển đổi API keys khi hết quota
+  - Theo dõi trạng thái keys khả dụng
+  - Xử lý thông minh khi tất cả keys hết quota
 - **Validation dữ liệu**: Kiểm tra và cảnh báo số CCCD không hợp lệ
 - **Xuất Excel**: Tự động xuất kết quả ra file Excel
 
@@ -180,6 +183,11 @@ python test_proxy.py
 python test_checkpoint.py
 ```
 
+#### Test API keys exhausted logic
+```bash
+python test_api_keys_exhausted.py
+```
+
 ## ⚙️ Cấu hình
 
 ### Test Mode
@@ -207,6 +215,13 @@ Trong GUI, tích vào checkbox "Use Checkpoint" để lưu tiến độ
 ### Lỗi API quota
 - Thêm nhiều API keys vào `api_keys.txt`
 - Sử dụng `create_api_keys.py` để tạo keys tự động
+- Hệ thống tự động chuyển đổi API keys khi hết quota
+- Khi tất cả keys hết quota, có 5 tùy chọn xử lý:
+  1. Chờ reset quota (00:00 UTC)
+  2. Thêm API keys mới
+  3. Tạo API keys tự động
+  4. Lưu tiến độ và thoát
+  5. Tạm dừng và thử lại sau
 
 ### Lỗi số CCCD thiếu
 - Hệ thống sẽ cảnh báo và gợi ý retry
