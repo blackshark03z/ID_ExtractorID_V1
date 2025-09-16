@@ -6,13 +6,12 @@ Hệ thống trích xuất thông tin từ CCCD (Căn cước công dân) sử d
 
 - **OCR thông minh**: Sử dụng Gemini Flash API để trích xuất thông tin chính xác
 - **Xử lý đa định dạng**: Hỗ trợ ảnh JPG, PNG, PDF
-- **Giao diện GUI**: Giao diện đồ họa thân thiện với người dùng
+  
 - **Hệ thống checkpoint**: Tự động lưu và khôi phục tiến độ xử lý
 - **Quản lý API keys thông minh**: 
   - Tự động chuyển đổi API keys khi hết quota
   - Theo dõi trạng thái keys khả dụng
   - Xử lý thông minh khi tất cả keys hết quota
-  - **Xuất Excel tạm thời**: Tự động xuất dữ liệu đã xử lý khi gặp lỗi
 - **Validation dữ liệu**: Kiểm tra và cảnh báo số CCCD không hợp lệ
 - **Xuất Excel**: Tự động xuất kết quả ra file Excel
 
@@ -70,11 +69,7 @@ AIzaSyB1234567890abcdefghijklmnop
 ```
 ID_Extractor/
 ├── extract_gemini.py          # Script chính (command line)
-├── extract_gui.py             # Giao diện GUI
 ├── setup.py                   # Script thiết lập tự động
-├── create_api_keys.py         # Tạo API keys tự động
-├── test_proxy.py              # Test proxy
-├── test_checkpoint.py         # Test checkpoint system
 ├── requirements.txt           # Dependencies
 ├── README.md                 # Hướng dẫn sử dụng
 ├── README_API_KEYS.md        # Hướng dẫn tạo API keys
@@ -87,11 +82,7 @@ ID_Extractor/
 ```
 ID_Extractor/
 ├── extract_gemini.py          # Script chính (command line)
-├── extract_gui.py             # Giao diện GUI
 ├── setup.py                   # Script thiết lập tự động
-├── create_api_keys.py         # Tạo API keys tự động
-├── test_proxy.py              # Test proxy
-├── test_checkpoint.py         # Test checkpoint system
 ├── requirements.txt           # Dependencies
 ├── api_keys.txt              # API keys (tạo thủ công)
 ├── gmail_list.txt            # Danh sách Gmail (tùy chọn)
@@ -157,22 +148,14 @@ AIzaSyB1234567890abcdefghijklmnop
 
 ### 2. Chạy chương trình
 
-#### Sử dụng GUI (Khuyến nghị)
-```bash
-python extract_gui.py
-```
-
-#### Sử dụng Command Line
+#### Sử dụng Command Line (CLI)
 ```bash
 python extract_gemini.py
 ```
 
 ### Các tính năng bổ sung
 
-#### Tạo API keys tự động
-```bash
-python create_api_keys.py
-```
+  
 
 #### Test proxy
 ```bash
@@ -197,11 +180,8 @@ Trong `extract_gemini.py`, thay đổi:
 TEST_MODE = True  # Chỉ xử lý 5 folder đầu tiên
 ```
 
-### Auto delete expired CCCD
-Trong GUI, tích vào checkbox "Auto delete expired CCCD"
-
 ### Checkpoint
-Trong GUI, tích vào checkbox "Use Checkpoint" để lưu tiến độ
+Tiến trình được lưu tự động bằng file `checkpoint.json` trong CLI
 
 ## 🔧 Troubleshooting
 
@@ -215,15 +195,12 @@ Trong GUI, tích vào checkbox "Use Checkpoint" để lưu tiến độ
 
 ### Lỗi API quota
 - Thêm nhiều API keys vào `api_keys.txt`
-- Sử dụng `create_api_keys.py` để tạo keys tự động
 - Hệ thống tự động chuyển đổi API keys khi hết quota
-- **Xuất Excel tạm thời**: Khi hết quota, hệ thống sẽ tự động xuất Excel cho dữ liệu đã xử lý
-- Khi tất cả keys hết quota, có 5 tùy chọn xử lý:
+- Khi tất cả keys hết quota, có 4 tùy chọn xử lý:
   1. Chờ reset quota (00:00 UTC)
   2. Thêm API keys mới
-  3. Tạo API keys tự động
-  4. Lưu tiến độ và thoát
-  5. Tạm dừng và thử lại sau
+  3. Lưu tiến độ và thoát
+  4. Tạm dừng và thử lại sau
 
 ### Lỗi số CCCD thiếu
 - Hệ thống sẽ cảnh báo và gợi ý retry

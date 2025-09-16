@@ -40,29 +40,8 @@ def create_api_keys_template():
         print("ℹ️  File api_keys.txt đã tồn tại")
 
 def create_sample_files():
-    """Tạo các file mẫu tùy chọn"""
-    
-    # Tạo gmail_list.txt mẫu
-    if not os.path.exists('gmail_list.txt'):
-        print("\n📧 Tạo file gmail_list.txt mẫu...")
-        with open('gmail_list.txt', 'w', encoding='utf-8') as f:
-            f.write("# Danh sách Gmail để tạo API keys tự động\n")
-            f.write("# Format: Gmail|Password\n")
-            f.write("# Ví dụ:\n")
-            f.write("# example1@gmail.com|password123\n")
-            f.write("# example2@gmail.com|password456\n")
-        print("✅ Đã tạo file gmail_list.txt")
-    
-    # Tạo proxy_list.txt mẫu
-    if not os.path.exists('proxy_list.txt'):
-        print("\n🌐 Tạo file proxy_list.txt mẫu...")
-        with open('proxy_list.txt', 'w', encoding='utf-8') as f:
-            f.write("# Danh sách proxy (tùy chọn)\n")
-            f.write("# Format: ip:port hoặc ip:port:username:password\n")
-            f.write("# Ví dụ:\n")
-            f.write("# 192.168.1.1:8080\n")
-            f.write("# 10.0.0.1:3128:user:pass\n")
-        print("✅ Đã tạo file proxy_list.txt")
+    """Tạo các file mẫu tùy chọn (CLI-only)"""
+    # Không còn tạo gmail_list.txt hoặc proxy_list.txt trong chế độ CLI-only
 
 def show_next_steps():
     """Hiển thị các bước tiếp theo"""
@@ -72,9 +51,8 @@ def show_next_steps():
     print("\n📋 Các bước tiếp theo:")
     print("1. Thêm Gemini API keys vào file api_keys.txt")
     print("2. Đặt file ZIP chứa ảnh CCCD vào thư mục Input_file/")
-    print("3. Chạy chương trình:")
-    print("   - GUI: python extract_gui.py")
-    print("   - Command line: python extract_gemini.py")
+    print("3. Chạy chương trình (CLI):")
+    print("   python extract_gemini.py")
     print("\n📚 Xem README.md để biết thêm chi tiết")
     print("="*50)
 
