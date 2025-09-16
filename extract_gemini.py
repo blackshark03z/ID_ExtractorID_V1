@@ -11,6 +11,7 @@ from PIL import Image
 import fitz  # PyMuPDF
 from datetime import datetime, timedelta
 import shutil
+import hashlib
 
 # ---- Cấu hình Gemini API ----
 GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
@@ -192,6 +193,7 @@ def handle_all_keys_exhausted():
 # ---- Hàm lấy API key hiện tại ----
 def get_current_api_key():
     """Lấy API key hiện tại"""
+    global current_key_index
     if not api_keys_list:
         return None
     
@@ -200,7 +202,6 @@ def get_current_api_key():
         # Tìm key khả dụng tiếp theo
         for i in range(len(api_keys_list)):
             if i not in exhausted_keys:
-                global current_key_index
                 current_key_index = i
                 break
         else:
@@ -214,25 +215,23 @@ def extract_info_with_gemini(image_paths):
     try:
         # Chuẩn bị prompt cho Gemini
         prompt = """
-        Hãy trích xuất thông tin từ ảnh CCCD (Căn cước công dân) và trả về dưới dạng JSON với các trường sau:
+        Bạn là hệ thống trích xuất thông tin từ ảnh CCCD (Căn cước công dân).
+        YÊU CẦU: Trả về DUY NHẤT một JSON hợp lệ với các khóa sau (không có bất kỳ văn bản nào ngoài JSON):
         {
-            "CCCD": "Số căn cước công dân (12 chữ số)",
-            "HoTen": "Họ và tên đầy đủ",
-            "NgaySinh": "Ngày sinh (định dạng dd/mm/yyyy)",
-            "GioiTinh": "Giới tính (NAM hoặc NỮ)",
-            "DiaChi": "Địa chỉ thường trú",
-            "NoiCap": "Nơi cấp CCCD",
-            "NgayCap": "Ngày cấp (định dạng dd/mm/yyyy)"
+            "CCCD": "Số CCCD đúng 12 chữ số (chỉ ký tự 0-9)",
+            "HoTen": "HỌ VÀ TÊN (VIẾT HOA KHÔNG DẤU)",
+            "GioiTinh": "NAM hoặc NU (VIẾT HOA KHÔNG DẤU)",
+            "NgaySinh": "dd/mm/yyyy",
+            "DiaChi": "NOI THUONG TRU (VIẾT HOA KHÔNG DẤU)",
+            "NgayHetHan": "dd/mm/yyyy hoặc null nếu không có"
         }
-        
-        Lưu ý QUAN TRỌNG:
-        - Số CCCD phải có đúng 12 chữ số, không thiếu không thừa
-        - Nếu số CCCD bị mờ/nhỏ, hãy cố gắng đọc kỹ từng chữ số
-        - Số CCCD thường nằm ở góc trên bên phải hoặc giữa mặt trước
-        - Nếu không đọc được số CCCD, để trống hoặc null
-        - Chỉ trả về JSON, không có text khác
-        - Đảm bảo định dạng JSON hợp lệ
-        - Ưu tiên độ chính xác hơn là tốc độ
+
+        QUY TẮC BẮT BUỘC:
+        - CHUẨN HÓA VIẾT HOA KHÔNG DẤU cho các trường chữ: HoTen, GioiTinh, DiaChi.
+        - Số CCCD phải là CHUỖI 12 CHỮ SỐ. Nếu nhận dạng không đủ 12 số, để rỗng hoặc null.
+        - Ngày sinh/Ngày hết hạn theo định dạng dd/mm/yyyy. Nếu không chắc chắn, để rỗng hoặc null.
+        - Chỉ trả về JSON, không kèm giải thích hoặc văn bản khác.
+        - Nếu có nhiều ảnh, hãy dùng ảnh MẶT TRƯỚC (ảnh chân dung) để lấy HoTen, CCCD, NgaySinh; dùng ảnh MẶT SAU (có QR/MRZ) để đối chiếu khi cần.
         """
         
         # Chuẩn bị nội dung cho API
@@ -403,6 +402,10 @@ def process_cccd_folder(folder_path):
     for ext in image_extensions:
         images.extend(glob.glob(os.path.join(folder_path, ext)))
         images.extend(glob.glob(os.path.join(folder_path, ext.upper())))
+    # Đưa T.jpg/S.jpg lên đầu trước khi khử trùng
+    images = prioritize_cccd_filenames(images)
+    # Khử trùng ảnh theo nội dung, ưu tiên giữ T.jpg/S.jpg nếu trùng
+    images = deduplicate_images_keep_priority(images)
     
     # Tìm file PDF
     pdf_files = glob.glob(os.path.join(folder_path, "*.pdf"))
@@ -441,8 +444,8 @@ def process_cccd_folder(folder_path):
     if images:
         print(f"  Thử xử lý từ ảnh trực tiếp...")
         
-        # Sắp xếp ảnh theo tên để đảm bảo thứ tự
-        images.sort()
+        # Sắp xếp: ưu tiên T.jpg/S.jpg vẫn ở đầu
+        images = prioritize_cccd_filenames(sorted(images))
         
         # Chỉ xử lý 2 ảnh đầu tiên (mặt trước và mặt sau)
         images_to_process = images[:2]
@@ -462,6 +465,51 @@ def process_cccd_folder(folder_path):
     
     # Nếu không có gì, trả về dict rỗng
     return {}
+
+# ---- Khử trùng ảnh, ưu tiên T.jpg/S.jpg khi trùng nội dung ----
+def _file_md5(path):
+    try:
+        with open(path, 'rb') as f:
+            data = f.read()
+        return hashlib.md5(data).hexdigest()
+    except Exception:
+        return None
+
+def _is_priority_name(path):
+    name = os.path.basename(path).lower()
+    return name in ("t.jpg", "s.jpg")
+
+def deduplicate_images_keep_priority(images):
+    """Loại ảnh trùng nội dung (md5), giữ 1 ảnh/nhóm; ưu tiên T.jpg/S.jpg."""
+    hash_to_best = {}
+    for p in images:
+        h = _file_md5(p)
+        if h is None:
+            # Nếu không tính được hash, coi như duy nhất
+            hash_to_best[p] = p
+            continue
+        if h not in hash_to_best:
+            hash_to_best[h] = p
+        else:
+            # Nếu đã có, chọn ảnh ưu tiên nếu có tên T.jpg/S.jpg
+            current_best = hash_to_best[h]
+            if _is_priority_name(p) and not _is_priority_name(current_best):
+                hash_to_best[h] = p
+            # Nếu cả hai đều không/đều ưu tiên, giữ nguyên ảnh đã chọn trước
+    # Trả về danh sách sau khi khử trùng
+    return list({v for v in hash_to_best.values()})
+
+def prioritize_cccd_filenames(images):
+    """Đưa các ảnh tên T.jpg, S.jpg lên đầu danh sách."""
+    priority = []
+    others = []
+    for p in images:
+        if _is_priority_name(p):
+            priority.append(p)
+        else:
+            others.append(p)
+    # Giữ thứ tự ổn định cho phần còn lại
+    return priority + others
 
 # ---- Quản lý checkpoint ----
 def save_checkpoint(processed_folders, current_zip_file):
@@ -507,6 +555,35 @@ def clear_checkpoint():
             print("🗑️  Đã xóa checkpoint")
     except Exception as e:
         print(f"❌ Lỗi xóa checkpoint: {e}")
+
+# ---- Hỏi tiếp tục hay làm lại khi có checkpoint của cùng file ----
+def ask_resume_or_restart_for_zip(selected_zip_path: str):
+    """Nếu checkpoint khớp cùng zip, hỏi người dùng muốn tiếp tục hay làm lại.
+    Trả về tuple (mode, checkpoint_data) với mode trong {"resume", "restart", "none"}.
+    """
+    cp = load_checkpoint()
+    if not cp:
+        return "none", None
+    if cp.get('zip_file') != selected_zip_path:
+        return "none", None
+    processed = len(cp.get('processed_folders', []))
+    print("\n" + "="*50)
+    print("🔄 PHÁT HIỆN CHECKPOINT CHO FILE ZIP ĐANG CHỌN")
+    print("="*50)
+    print(f"📂 File: {os.path.basename(selected_zip_path)}")
+    print(f"📊 Đã xử lý: {processed} folder")
+    print("1. ⏭️  Tiếp tục từ checkpoint hiện tại")
+    print("2. 🗑️  Làm lại từ đầu (xóa checkpoint)")
+    while True:
+        choice = input("\n🎯 Chọn (1-2): ").strip()
+        if choice in ("1", ""):
+            print("✅ Tiếp tục từ checkpoint hiện tại")
+            return "resume", cp
+        if choice == "2":
+            if clear_checkpoint() is None:
+                pass
+            return "restart", None
+        print("❌ Lựa chọn không hợp lệ, vui lòng chọn 1-2")
 
 # ---- Main process ----
 def main():
@@ -580,6 +657,9 @@ def main():
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             zip_ref.extractall(extract_dir)
     
+    # Hỏi tiếp tục hay làm lại nếu có checkpoint của đúng file zip
+    mode, checkpoint_data = ask_resume_or_restart_for_zip(zip_path)
+
     # Duyệt folder con - xử lý cấu trúc thư mục lồng nhau
     rows = []
     
@@ -612,17 +692,12 @@ def main():
     
     print(f"📁 Tìm thấy {len(all_person_folders)} folder cần xử lý")
     
-    # Tải checkpoint
-    checkpoint_data = load_checkpoint()
+    # Chuẩn bị trạng thái theo lựa chọn
     processed_folders = []
-    
-    if checkpoint_data and checkpoint_data.get('zip_file') == zip_path:
-        # Tiếp tục từ checkpoint
+    if mode == "resume" and checkpoint_data:
         processed_folders = checkpoint_data.get('processed_folders', [])
         start_index = len(processed_folders)
         print(f"🔄 Tiếp tục từ folder {start_index + 1}/{len(all_person_folders)}")
-        
-        # Khôi phục API key index
         global current_key_index
         current_key_index = checkpoint_data.get('current_key_index', 0)
         print(f"🔑 Sử dụng API key {current_key_index + 1}/{len(api_keys_list)}")
