@@ -42,7 +42,8 @@ def load_api_keys():
 # ---- Biến global cho API keys ----
 api_keys_list = load_api_keys()
 current_key_index = 0
-exhausted_keys = set()  # Theo dõi các key đã hết quota
+exhausted_keys = set()  # Theo dõi các key đã hết quota/tạm thời không dùng
+blacklisted_keys = set()  # Theo dõi các key bị suspend/disabled
 
 # ---- Cấu hình đường dẫn ----
 # Người dùng sẽ nhập file zip đầu vào
@@ -119,21 +120,24 @@ def reset_exhausted_keys():
     global exhausted_keys
     exhausted_keys.clear()
     print("🔄 Reset danh sách keys đã hết quota")
+    # Không reset blacklist tự động để tránh dùng lại key bị treo
 
 def get_available_keys_count():
-    """Lấy số lượng keys còn khả dụng"""
-    return len(api_keys_list) - len(exhausted_keys)
+    """Lấy số lượng keys còn khả dụng (không tính exhausted và blacklisted)."""
+    return len(api_keys_list) - len(exhausted_keys) - len(blacklisted_keys)
 
 def show_api_keys_status():
     """Hiển thị trạng thái API keys"""
     total_keys = len(api_keys_list)
     available_keys = get_available_keys_count()
     exhausted_count = len(exhausted_keys)
+    blacklisted_count = len(blacklisted_keys)
     
     print(f"\n🔑 Trạng thái API Keys:")
     print(f"   📊 Tổng số: {total_keys}")
     print(f"   ✅ Khả dụng: {available_keys}")
-    print(f"   ❌ Hết quota: {exhausted_count}")
+    print(f"   ❌ Hết quota/tạm dừng: {exhausted_count}")
+    print(f"   ⛔ Bị treo (blacklist): {blacklisted_count}")
     
     if available_keys == 0:
         print(f"   ⚠️  TẤT CẢ KEYS ĐÃ HẾT QUOTA!")
@@ -198,10 +202,10 @@ def get_current_api_key():
         return None
     
     # Kiểm tra xem key hiện tại có bị hết quota không
-    if current_key_index in exhausted_keys:
+    if current_key_index in exhausted_keys or current_key_index in blacklisted_keys:
         # Tìm key khả dụng tiếp theo
         for i in range(len(api_keys_list)):
-            if i not in exhausted_keys:
+            if i not in exhausted_keys and i not in blacklisted_keys:
                 current_key_index = i
                 break
         else:
@@ -222,16 +226,20 @@ def extract_info_with_gemini(image_paths):
             "HoTen": "HỌ VÀ TÊN (VIẾT HOA KHÔNG DẤU)",
             "GioiTinh": "NAM hoặc NU (VIẾT HOA KHÔNG DẤU)",
             "NgaySinh": "dd/mm/yyyy",
-            "DiaChi": "NOI THUONG TRU (VIẾT HOA KHÔNG DẤU)",
+            "DiaChi": "NOI THUONG TRU/PLACE OF RESIDENCE/PERMANENT ADDRESS (VIẾT HOA KHÔNG DẤU, TUYỆT ĐỐI KHÔNG LẤY QUÊ QUÁN/NATIVE PLACE)",
             "NgayHetHan": "dd/mm/yyyy hoặc null nếu không có"
         }
 
         QUY TẮC BẮT BUỘC:
-        - CHUẨN HÓA VIẾT HOA KHÔNG DẤU cho các trường chữ: HoTen, GioiTinh, DiaChi.
+        - CHUẨN HÓA VIẾT HOA KHÔNG DẤU cho: HoTen, GioiTinh, DiaChi.
         - Số CCCD phải là CHUỖI 12 CHỮ SỐ. Nếu nhận dạng không đủ 12 số, để rỗng hoặc null.
         - Ngày sinh/Ngày hết hạn theo định dạng dd/mm/yyyy. Nếu không chắc chắn, để rỗng hoặc null.
+        - DiaChi PHẢI là NƠI THƯỜNG TRÚ/PLACE OF RESIDENCE/PERMANENT ADDRESS. KHÔNG ĐƯỢC LẤY QUÊ QUÁN/PLACE OF BIRTH/NATIVE PLACE/DOMICILE.
+          Ưu tiên các nhãn sau: "NƠI THƯỜNG TRÚ", "ĐỊA CHỈ", "PLACE OF RESIDENCE", "PERMANENT ADDRESS", "ADDRESS".
+          Loại trừ các nhãn: "QUÊ QUÁN", "NƠI SINH", "PLACE OF BIRTH", "NATIVE PLACE", "DOMICILE".
+          Nếu cả NƠI THƯỜNG TRÚ và QUÊ QUÁN cùng xuất hiện, CHỈ lấy NƠI THƯỜNG TRÚ. Nếu chỉ có QUÊ QUÁN, để DiaChi = null.
         - Chỉ trả về JSON, không kèm giải thích hoặc văn bản khác.
-        - Nếu có nhiều ảnh, hãy dùng ảnh MẶT TRƯỚC (ảnh chân dung) để lấy HoTen, CCCD, NgaySinh; dùng ảnh MẶT SAU (có QR/MRZ) để đối chiếu khi cần.
+        - Nếu có nhiều ảnh, dùng ảnh MẶT TRƯỚC để lấy HoTen, CCCD, NgaySinh; dùng MẶT SAU (QR/MRZ) để đối chiếu khi cần.
         """
         
         # Chuẩn bị nội dung cho API
@@ -314,13 +322,17 @@ def extract_info_with_gemini(image_paths):
                                 return {}
                         break  # Thử key mới
                     elif response.status_code in (401, 403):
-                        # Key không hợp lệ/không có quyền – loại key này và thử key khác
+                        # Key không hợp lệ/không có quyền – có thể bị suspend/disabled
                         try:
                             body = response.text
                         except Exception:
                             body = ""
-                        print(f"  ❌ API key {current_key_index + 1} bị từ chối ({response.status_code}). {body[:200]}")
-                        exhausted_keys.add(current_key_index)
+                        reason = body.lower() if body else ""
+                        if any(k in reason for k in ["suspend", "disabled", "permission", "forbidden", "unauthorized", "blocked"]):
+                            print(f"  ⛔ API key {current_key_index + 1} bị đưa vào blacklist ({response.status_code}).")
+                            blacklisted_keys.add(current_key_index)
+                        else:
+                            exhausted_keys.add(current_key_index)
                         break  # Thử key khác
                     else:
                         try:
