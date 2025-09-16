@@ -219,27 +219,27 @@ def extract_info_with_gemini(image_paths):
     try:
         # Chuẩn bị prompt cho Gemini
         prompt = """
-        Bạn là hệ thống trích xuất thông tin từ ảnh CCCD (Căn cước công dân).
-        YÊU CẦU: Trả về DUY NHẤT một JSON hợp lệ với các khóa sau (không có bất kỳ văn bản nào ngoài JSON):
+        Bạn là hệ thống trích xuất thông tin từ ảnh Căn cước công dân (CCCD).
+        Trả về DUY NHẤT một JSON hợp lệ (không kèm văn bản khác) với CÁC TRƯỜNG SAU:
         {
-            "CCCD": "Số CCCD đúng 12 chữ số (chỉ ký tự 0-9)",
-            "HoTen": "HỌ VÀ TÊN (VIẾT HOA KHÔNG DẤU)",
-            "GioiTinh": "NAM hoặc NU (VIẾT HOA KHÔNG DẤU)",
-            "NgaySinh": "dd/mm/yyyy",
-            "DiaChi": "NOI THUONG TRU/PLACE OF RESIDENCE/PERMANENT ADDRESS (VIẾT HOA KHÔNG DẤU, TUYỆT ĐỐI KHÔNG LẤY QUÊ QUÁN/NATIVE PLACE)",
-            "NgayHetHan": "dd/mm/yyyy hoặc null nếu không có"
+            "CCCD": "Giá trị của mục 'Số/No.' – CHUỖI 12 CHỮ SỐ",
+            "HoTen": "Giá trị của mục 'Họ và tên/Full name' – VIẾT HOA KHÔNG DẤU",
+            "NgaySinh": "Giá trị của mục 'Ngày sinh/Date of birth' – dd/mm/yyyy",
+            "GioiTinh": "Giá trị của mục 'Giới tính/Sex' – NAM hoặc NU",
+            "DiaChi": "Giá trị của mục 'Nơi thường trú/Place of residence' hoặc 'Permanent address' – VIẾT HOA KHÔNG DẤU (TUYỆT ĐỐI KHÔNG LẤY 'Quê quán/Place of origin')",
+            "NgayHetHan": "Giá trị của mục 'Có giá trị đến/Date of expiry' – dd/mm/yyyy hoặc null nếu không có"
         }
 
-        QUY TẮC BẮT BUỘC:
-        - CHUẨN HÓA VIẾT HOA KHÔNG DẤU cho: HoTen, GioiTinh, DiaChi.
-        - Số CCCD phải là CHUỖI 12 CHỮ SỐ. Nếu nhận dạng không đủ 12 số, để rỗng hoặc null.
-        - Ngày sinh/Ngày hết hạn theo định dạng dd/mm/yyyy. Nếu không chắc chắn, để rỗng hoặc null.
-        - DiaChi PHẢI là NƠI THƯỜNG TRÚ/PLACE OF RESIDENCE/PERMANENT ADDRESS. KHÔNG ĐƯỢC LẤY QUÊ QUÁN/PLACE OF BIRTH/NATIVE PLACE/DOMICILE.
-          Ưu tiên các nhãn sau: "NƠI THƯỜNG TRÚ", "ĐỊA CHỈ", "PLACE OF RESIDENCE", "PERMANENT ADDRESS", "ADDRESS".
-          Loại trừ các nhãn: "QUÊ QUÁN", "NƠI SINH", "PLACE OF BIRTH", "NATIVE PLACE", "DOMICILE".
-          Nếu cả NƠI THƯỜNG TRÚ và QUÊ QUÁN cùng xuất hiện, CHỈ lấy NƠI THƯỜNG TRÚ. Nếu chỉ có QUÊ QUÁN, để DiaChi = null.
-        - Chỉ trả về JSON, không kèm giải thích hoặc văn bản khác.
-        - Nếu có nhiều ảnh, dùng ảnh MẶT TRƯỚC để lấy HoTen, CCCD, NgaySinh; dùng MẶT SAU (QR/MRZ) để đối chiếu khi cần.
+        RÀNG BUỘC NGHIÊM NGẶT CHO 'DiaChi':
+        - Chỉ chấp nhận các nhãn: "NƠI THƯỜNG TRÚ", "ĐỊA CHỈ", "PLACE OF RESIDENCE", "PERMANENT ADDRESS", "ADDRESS".
+        - Loại trừ tuyệt đối các nhãn: "QUÊ QUÁN", "NƠI SINH", "PLACE OF ORIGIN", "PLACE OF BIRTH", "NATIVE PLACE", "DOMICILE".
+        - Nếu vừa có NƠI THƯỜNG TRÚ vừa có QUÊ QUÁN, CHỈ lấy NƠI THƯỜNG TRÚ. Nếu chỉ thấy QUÊ QUÁN, để DiaChi = null.
+
+        YÊU CẦU CHUNG:
+        - Chuẩn hóa VIẾT HOA KHÔNG DẤU cho HoTen, GioiTinh, DiaChi.
+        - CCCD là CHUỖI 12 CHỮ SỐ. Nếu không đủ 12 số, để trống hoặc null.
+        - Ngày theo dd/mm/yyyy; nếu không chắc chắn, để trống hoặc null.
+        - Nếu có nhiều ảnh, dùng mặt TRƯỚC cho HoTen/CCCD/NgaySinh, và thông tin hạn; dùng mặt SAU để đối chiếu nếu cần.
         """
         
         # Chuẩn bị nội dung cho API
@@ -322,18 +322,41 @@ def extract_info_with_gemini(image_paths):
                                 return {}
                         break  # Thử key mới
                     elif response.status_code in (401, 403):
-                        # Key không hợp lệ/không có quyền – có thể bị suspend/disabled
+                        # Phân biệt lỗi tạm thời vs bị treo/ban
                         try:
                             body = response.text
                         except Exception:
                             body = ""
-                        reason = body.lower() if body else ""
-                        if any(k in reason for k in ["suspend", "disabled", "permission", "forbidden", "unauthorized", "blocked"]):
-                            print(f"  ⛔ API key {current_key_index + 1} bị đưa vào blacklist ({response.status_code}).")
+                        reason = (body or "").lower()
+                        temporary_markers = [
+                            "quota", "rate limit", "exceeded", "temporar", "overload",
+                            "resource_exhausted", "concurrent", "traffic"
+                        ]
+                        blacklist_markers = [
+                            "suspend", "disabled", "deactivat", "ban", "banned",
+                            "policy", "violation", "abuse", "blocked by policy"
+                        ]
+                        if any(m in reason for m in blacklist_markers):
+                            print(f"  ⛔ API key {current_key_index + 1} vào blacklist ({response.status_code}).")
                             blacklisted_keys.add(current_key_index)
                         else:
+                            print(f"  ⚠️  API key {current_key_index + 1} tạm thời không dùng được ({response.status_code}).")
                             exhausted_keys.add(current_key_index)
                         break  # Thử key khác
+                    elif response.status_code == 400:
+                        # 400 có thể là "API key not valid" → đưa key vào blacklist để bỏ qua
+                        try:
+                            body = response.text or ""
+                        except Exception:
+                            body = ""
+                        if "api key not valid" in body.lower() or "invalid api key" in body.lower():
+                            print(f"  ⛔ API key {current_key_index + 1} không hợp lệ (400) → blacklist.")
+                            blacklisted_keys.add(current_key_index)
+                        else:
+                            print("  ❌ Lỗi API: 400")
+                            if body:
+                                print(f"     ↪ {body[:200]}")
+                        break
                     else:
                         try:
                             body = response.text
