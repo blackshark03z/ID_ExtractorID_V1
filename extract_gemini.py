@@ -268,10 +268,12 @@ def extract_info_with_gemini(image_paths):
             }
         }
         
-        # Thêm retry logic cho lỗi quota với thay đổi API key
+        # Thêm retry logic cho lỗi quota/403 với thay đổi API key
         max_retries_per_key = 2
+        max_total_attempts = max(1, len(api_keys_list) * max_retries_per_key)
+        attempts = 0
         
-        while True:
+        while attempts < max_total_attempts:
             current_key = get_current_api_key()
             if not current_key:
                 print("  ❌ Không có API key nào khả dụng")
@@ -280,7 +282,7 @@ def extract_info_with_gemini(image_paths):
                 # Xử lý khi tất cả keys hết quota
                 action = handle_all_keys_exhausted()
                 if action == "retry":
-                    continue  # Thử lại với keys mới
+                    continue  # Keys đã reload, thử lại
                 elif action == "save_and_exit":
                     return {"error": "all_keys_exhausted", "action": "save_and_exit"}
                 elif action == "pause":
@@ -292,6 +294,7 @@ def extract_info_with_gemini(image_paths):
             
             for attempt in range(max_retries_per_key):
                 try:
+                    attempts += 1
                     response = requests.post(url, headers=headers, json=data, timeout=30)
                     
                     if response.status_code == 200:
@@ -302,7 +305,7 @@ def extract_info_with_gemini(image_paths):
                             # Tất cả keys đã hết quota
                             action = handle_all_keys_exhausted()
                             if action == "retry":
-                                break  # Thử lại với keys mới
+                                break  # Keys đã reload, thử lại
                             elif action == "save_and_exit":
                                 return {"error": "all_keys_exhausted", "action": "save_and_exit"}
                             elif action == "pause":
@@ -310,8 +313,23 @@ def extract_info_with_gemini(image_paths):
                             else:
                                 return {}
                         break  # Thử key mới
+                    elif response.status_code in (401, 403):
+                        # Key không hợp lệ/không có quyền – loại key này và thử key khác
+                        try:
+                            body = response.text
+                        except Exception:
+                            body = ""
+                        print(f"  ❌ API key {current_key_index + 1} bị từ chối ({response.status_code}). {body[:200]}")
+                        exhausted_keys.add(current_key_index)
+                        break  # Thử key khác
                     else:
+                        try:
+                            body = response.text
+                        except Exception:
+                            body = ""
                         print(f"  ❌ Lỗi API: {response.status_code}")
+                        if body:
+                            print(f"     ↪ {body[:200]}")
                         break
                 except Exception as e:
                     print(f"  ❌ Lỗi kết nối: {e}")
@@ -323,7 +341,7 @@ def extract_info_with_gemini(image_paths):
                             # Tất cả keys đã hết quota
                             action = handle_all_keys_exhausted()
                             if action == "retry":
-                                break  # Thử lại với keys mới
+                                break  # Keys đã reload, thử lại
                             elif action == "save_and_exit":
                                 return {"error": "all_keys_exhausted", "action": "save_and_exit"}
                             elif action == "pause":
@@ -331,6 +349,17 @@ def extract_info_with_gemini(image_paths):
                             else:
                                 return {}
                         break
+            # Nếu tất cả keys đã bị đánh dấu hết/không hợp lệ
+            if len(exhausted_keys) >= len(api_keys_list):
+                action = handle_all_keys_exhausted()
+                if action == "retry":
+                    continue
+                elif action == "save_and_exit":
+                    return {"error": "all_keys_exhausted", "action": "save_and_exit"}
+                elif action == "pause":
+                    return {"error": "all_keys_exhausted", "action": "pause"}
+                else:
+                    return {}
             
     except Exception as e:
         print(f"Lỗi gọi Gemini API: {e}")
@@ -737,9 +766,21 @@ def main():
                         today = datetime.now()
                         
                         if expiry_date < today:
-                            print(f"  ⚠️  CCCD đã hết hạn ({info['NgayHetHan']}) - Xóa folder")
-                            shutil.rmtree(folder_path)
-                            processed_folders.append(folder_path)
+                            try:
+                                print(f"  ⚠️  CCCD đã hết hạn ({info['NgayHetHan']}) - Đổi tên folder thêm ' hết hạn'")
+                                parent_dir = os.path.dirname(folder_path)
+                                base_name = os.path.basename(folder_path)
+                                new_name = base_name + " hết hạn"
+                                new_path = os.path.join(parent_dir, new_name)
+                                # Tránh đè nếu đã tồn tại tên mới
+                                if os.path.exists(new_path):
+                                    ts = datetime.now().strftime("_%Y%m%d_%H%M%S")
+                                    new_path = os.path.join(parent_dir, new_name + ts)
+                                os.rename(folder_path, new_path)
+                                processed_folders.append(new_path)
+                            except Exception as e:
+                                print(f"  ❌ Không thể đổi tên folder hết hạn: {e}")
+                                processed_folders.append(folder_path)
                             save_checkpoint(processed_folders, zip_path)
                             continue
                         elif expiry_date < today + timedelta(days=30):
