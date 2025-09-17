@@ -12,6 +12,7 @@ import fitz  # PyMuPDF
 from datetime import datetime, timedelta
 import shutil
 import hashlib
+import random
 
 # ---- Cấu hình Gemini API ----
 GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
@@ -226,12 +227,12 @@ def extract_info_with_gemini(image_paths):
             "HoTen": "Giá trị của mục 'Họ và tên/Full name' – VIẾT HOA KHÔNG DẤU",
             "NgaySinh": "Giá trị của mục 'Ngày sinh/Date of birth' – dd/mm/yyyy",
             "GioiTinh": "Giá trị của mục 'Giới tính/Sex' – NAM hoặc NU",
-            "DiaChi": "Giá trị của mục 'Nơi thường trú/Place of residence' hoặc 'Permanent address' – VIẾT HOA KHÔNG DẤU (TUYỆT ĐỐI KHÔNG LẤY 'Quê quán/Place of origin')",
+            "DiaChi": "Giá trị của mục 'NƠI THƯỜNG TRÚ' hoặc 'PLACE OF RESIDENCE' – VIẾT HOA KHÔNG DẤU (TUYỆT ĐỐI KHÔNG LẤY 'Quê quán/Place of origin')",
             "NgayHetHan": "Giá trị của mục 'Có giá trị đến/Date of expiry' – dd/mm/yyyy hoặc null nếu không có"
         }
 
         RÀNG BUỘC NGHIÊM NGẶT CHO 'DiaChi':
-        - Chỉ chấp nhận các nhãn: "NƠI THƯỜNG TRÚ", "ĐỊA CHỈ", "PLACE OF RESIDENCE", "PERMANENT ADDRESS", "ADDRESS".
+        - Chỉ chấp nhận đúng 2 nhãn: "NƠI THƯỜNG TRÚ" hoặc "PLACE OF RESIDENCE".
         - Loại trừ tuyệt đối các nhãn: "QUÊ QUÁN", "NƠI SINH", "PLACE OF ORIGIN", "PLACE OF BIRTH", "NATIVE PLACE", "DOMICILE".
         - Nếu vừa có NƠI THƯỜNG TRÚ vừa có QUÊ QUÁN, CHỈ lấy NƠI THƯỜNG TRÚ. Nếu chỉ thấy QUÊ QUÁN, để DiaChi = null.
 
@@ -276,8 +277,8 @@ def extract_info_with_gemini(image_paths):
             }
         }
         
-        # Thêm retry logic cho lỗi quota/403 với thay đổi API key
-        max_retries_per_key = 2
+        # Thêm retry logic cho lỗi quota/403 và 5xx với backoff
+        max_retries_per_key = 5  # tăng retry per-key để xử lý 5xx/UNAVAILABLE
         max_total_attempts = max(1, len(api_keys_list) * max_retries_per_key)
         attempts = 0
         
@@ -307,6 +308,7 @@ def extract_info_with_gemini(image_paths):
                     
                     if response.status_code == 200:
                         return process_response(response)
+                    # 429 - rate limit/quota per key → chuyển key
                     elif response.status_code == 429:
                         print(f"  ⚠️  API key {current_key_index + 1} hết quota")
                         if not switch_to_next_api_key():
@@ -321,6 +323,30 @@ def extract_info_with_gemini(image_paths):
                             else:
                                 return {}
                         break  # Thử key mới
+                    # 5xx - lỗi tạm thời máy chủ/model → backoff và thử lại cùng key
+                    elif 500 <= response.status_code < 600:
+                        try:
+                            body = response.text or ""
+                        except Exception:
+                            body = ""
+                        print(f"  ❌ Lỗi API tạm thời: {response.status_code}")
+                        if body:
+                            print(f"     ↪ {body[:200]}")
+                        # Respect Retry-After nếu có, ngược lại exponential backoff + jitter
+                        retry_after = response.headers.get('Retry-After') if hasattr(response, 'headers') else None
+                        if retry_after:
+                            try:
+                                wait_seconds = max(1, int(float(retry_after)))
+                            except Exception:
+                                wait_seconds = 0
+                        else:
+                            base = 3
+                            cap = 60
+                            wait_seconds = min(cap, base * (2 ** attempt))
+                            wait_seconds = int(wait_seconds + random.uniform(0, 1.5))
+                        print(f"  ⏳ Chờ {wait_seconds}s rồi thử lại cùng API key...")
+                        time.sleep(wait_seconds)
+                        continue
                     elif response.status_code in (401, 403):
                         # Phân biệt lỗi tạm thời vs bị treo/ban
                         try:
@@ -368,22 +394,14 @@ def extract_info_with_gemini(image_paths):
                         break
                 except Exception as e:
                     print(f"  ❌ Lỗi kết nối: {e}")
-                    if attempt < max_retries_per_key - 1:
-                        time.sleep(30)
-                        continue
-                    else:
-                        if not switch_to_next_api_key():
-                            # Tất cả keys đã hết quota
-                            action = handle_all_keys_exhausted()
-                            if action == "retry":
-                                break  # Keys đã reload, thử lại
-                            elif action == "save_and_exit":
-                                return {"error": "all_keys_exhausted", "action": "save_and_exit"}
-                            elif action == "pause":
-                                return {"error": "all_keys_exhausted", "action": "pause"}
-                            else:
-                                return {}
-                        break
+                    # Exponential backoff cho lỗi mạng, giữ nguyên key
+                    base = 2
+                    cap = 45
+                    wait_seconds = min(cap, base * (2 ** attempt))
+                    wait_seconds = int(wait_seconds + random.uniform(0, 1.5))
+                    print(f"  ⏳ Chờ {wait_seconds}s rồi thử lại kết nối...")
+                    time.sleep(wait_seconds)
+                    continue
             # Nếu tất cả keys đã bị đánh dấu hết/không hợp lệ
             if len(exhausted_keys) >= len(api_keys_list):
                 action = handle_all_keys_exhausted()
