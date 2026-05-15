@@ -1,248 +1,59 @@
-# ID Extractor - CCCD Information Extraction System
+# Tool OCR CCCD Việt Nam (Sử dụng AI Gemini)
 
-Hệ thống trích xuất thông tin từ CCCD (Căn cước công dân) sử dụng AI Gemini Flash API.
+Công cụ tự động hóa việc nhận diện và trích xuất thông tin Căn cước công dân (CCCD) Việt Nam từ ảnh hoặc file PDF, sử dụng sức mạnh của Google Gemini 2.5 Flash để đạt độ chính xác cao và thông minh hơn hẳn các phương pháp OCR truyền thống.
 
-## 🚀 Tính năng chính
+## 🌟 Tính năng nổi bật
 
-- **OCR thông minh**: Sử dụng Gemini Flash API để trích xuất thông tin chính xác
-- **Xử lý đa định dạng**: Hỗ trợ ảnh JPG, PNG, PDF
-  
-- **Hệ thống checkpoint**: Tự động lưu và khôi phục tiến độ xử lý
-- **Quản lý API keys thông minh**: 
-  - Tự động chuyển đổi API keys khi hết quota
-  - Theo dõi trạng thái keys khả dụng
-  - Xử lý thông minh khi tất cả keys hết quota
-- **Validation dữ liệu**: Kiểm tra và cảnh báo số CCCD không hợp lệ
-- **Xuất Excel**: Tự động xuất kết quả ra file Excel
+- **Nhận diện chính xác**: Không bị nhầm lẫn giữa chữ O/Q hay số 0 như các tool truyền thống.
+- **Tự động trích xuất từ PDF**: Hỗ trợ nhận diện các file PDF chứa ảnh scan thẻ CCCD. Tool tự động moi ảnh ra từ PDF.
+- **Tự động ghép cặp & đổi tên**: Thông minh nhận biết đâu là mặt trước, đâu là mặt sau từ một mớ hỗn độn (nhiều ảnh trong 1 folder, hoặc file PDF) và tự động chuẩn hóa đổi tên thành `front.jpg` và `back.jpg`.
+- **Đọc trực tiếp file ZIP**: Không cần giải nén thủ công! Chỉ cần ném file `.zip` chứa các folder con vào thư mục `input`, tool sẽ tự bung nén, tìm thư mục gốc và xử lý toàn bộ.
+- **Xoay vòng API Key**: Hỗ trợ cung cấp nhiều API Key cùng lúc để tránh việc bị Google giới hạn rate limit (chống sập tool giữa chừng do quá tải).
 
-## 📋 Thông tin được trích xuất
+## 📋 Yêu cầu hệ thống
 
-- **CCCD**: Số căn cước công dân (12 chữ số)
-- **Họ tên**: Họ và tên đầy đủ
-- **Ngày sinh**: Định dạng dd/mm/yyyy
-- **Giới tính**: NAM hoặc NỮ
-- **Địa chỉ**: Địa chỉ thường trú
-- **Nơi cấp**: Nơi cấp CCCD
-- **Ngày cấp**: Ngày cấp CCCD
-- **Ngày hết hạn**: Tự động tính toán (15 năm từ ngày cấp)
+- Hệ điều hành: Windows / macOS / Linux
+- Python: Phiên bản 3.9 trở lên
+- Có kết nối Internet để gọi Google Gemini API
 
-## 🛠️ Cài đặt
+## 🚀 Hướng dẫn cài đặt
 
-### Yêu cầu hệ thống
-- Python 3.7+
-- Windows/Linux/macOS
+1. **Clone mã nguồn (hoặc tải thư mục code)**:
+   Mở terminal / cmd (PowerShell) tại thư mục project `ID_Extractor-1`.
 
-### Cài đặt dependencies
-```bash
-pip install -r requirements.txt
-```
-
-### Thiết lập tự động (Khuyến nghị)
-```bash
-python setup.py
-```
-Script này sẽ tự động:
-- Tạo các thư mục cần thiết
-- Tạo file `api_keys.txt` mẫu
-- Tạo các file cấu hình tùy chọn
-
-### Thiết lập thủ công
-#### Tạo thư mục
-```bash
-mkdir Input_file
-mkdir extracted_all
-mkdir Excel
-```
-
-#### Cấu hình API keys
-1. Tạo file `api_keys.txt`
-2. Thêm các Gemini API keys (mỗi key một dòng)
-3. Ví dụ:
-```
-AIzaSyDzvw-vLXTOy0GoSx3Z8K_xyUksO-wesQ
-AIzaSyB1234567890abcdefghijklmnop
-```
-
-## 📁 Cấu trúc thư mục
-
-### Cấu trúc sau khi clone (ban đầu)
-```
-ID_Extractor/
-├── extract_gemini.py          # Script chính (command line)
-├── setup.py                   # Script thiết lập tự động
-├── requirements.txt           # Dependencies
-├── README.md                 # Hướng dẫn sử dụng
-├── README_API_KEYS.md        # Hướng dẫn tạo API keys
-├── README_CHECKPOINT.md      # Hướng dẫn checkpoint
-├── LICENSE                   # MIT License
-└── .gitignore               # Git ignore rules
-```
-
-### Cấu trúc sau khi thiết lập
-```
-ID_Extractor/
-├── extract_gemini.py          # Script chính (command line)
-├── setup.py                   # Script thiết lập tự động
-├── requirements.txt           # Dependencies
-├── api_keys.txt              # API keys (tạo thủ công)
-├── gmail_list.txt            # Danh sách Gmail (tùy chọn)
-├── proxy_list.txt            # Danh sách proxy (tùy chọn)
-├── README.md                 # Hướng dẫn sử dụng
-├── README_API_KEYS.md        # Hướng dẫn tạo API keys
-├── README_CHECKPOINT.md      # Hướng dẫn checkpoint
-├── LICENSE                   # MIT License
-├── .gitignore               # Git ignore rules
-├── Input_file/               # Thư mục chứa file ZIP đầu vào
-│   ├── Test.zip
-│   ├── Tenchuan.zip
-│   └── ...
-├── extracted_all/            # Thư mục chứa dữ liệu đã giải nén
-│   ├── Test/
-│   │   ├── AN CHI THANH/
-│   │   └── BON VAN CHANH/
-│   └── Tenchuan/
-└── Excel/                    # Thư mục chứa file Excel kết quả
-    ├── cccd_data_Test.xlsx
-    └── cccd_data_Tenchuan.xlsx
-```
-
-## 🎯 Cách sử dụng
-
-### 1. Thiết lập ban đầu
-
-#### Tạo cấu trúc thư mục
-Sau khi clone project, tạo các thư mục cần thiết:
-
-```bash
-# Tạo thư mục chứa file ZIP đầu vào
-mkdir Input_file
-
-# Tạo thư mục chứa dữ liệu đã giải nén
-mkdir extracted_all
-
-# Tạo thư mục chứa file Excel kết quả
-mkdir Excel
-```
-
-#### Cấu hình API keys
-1. Tạo file `api_keys.txt` trong thư mục gốc
-2. Thêm các Gemini API keys (mỗi key một dòng):
-```
-AIzaSyDzvw-vLXTOy0GoSx3Z8K_xyXUksO-wesQ
-AIzaSyB1234567890abcdefghijklmnop
-```
-
-#### Chuẩn bị dữ liệu
-1. Đặt file ZIP chứa ảnh CCCD vào thư mục `Input_file/`
-2. Cấu trúc file ZIP:
+2. **Cài đặt thư viện cần thiết**:
+   Chạy lệnh sau để cài các package vào Python:
+   ```bash
+   pip install -r cccd_ocr_tool\requirements.txt
    ```
-   Tenchuan.zip
-   ├── AN CHI THANH/
-   │   ├── CHÍ THANH-1.jpg
-   │   └── CHÍ THANH-2.jpg
-   ├── BON VAN CHANH/
-   │   ├── 5953325 bồn văn chanh cccd-1.jpg
-   │   └── 5953325 bồn văn chanh cccd-2.jpg
-   └── ...
+   *(Thư viện bao gồm: `google-generativeai`, `PyMuPDF`, `Pillow`, `openpyxl`)*
+
+3. **Cấu hình API Key**:
+   - Truy cập [Google AI Studio](https://aistudio.google.com/app/apikey) để lấy API Key miễn phí.
+   - Mở file `api_keys.txt` ở thư mục gốc (ngang hàng với `input`), dán API Key của bạn vào đó.
+   - *Mẹo: Nếu bạn phải xử lý hàng nghìn ảnh, hãy tạo nhiều API Key từ nhiều tài khoản Google khác nhau và dán mỗi key trên 1 dòng trong file `api_keys.txt`. Tool sẽ tự động xoay vòng qua các key này khi bị giới hạn Quota.*
+
+## 💡 Cách sử dụng
+
+**Cách 1: Quét từ thư mục / file ZIP có sẵn trong thư mục `input`**
+1. Đặt các folder chứa ảnh/PDF của từng người hoặc ném thẳng file `.zip` (chứa dữ liệu) vào thư mục `input`.
+2. Mở Terminal và chạy lệnh:
+   ```bash
+   python cccd_ocr_tool\main.py
    ```
+3. Một menu tương tác sẽ hiện ra liệt kê các folder và file zip có trong `input`. Gõ số tương ứng (hoặc chọn `0` để quét tất cả) và nhấn Enter.
 
-### 2. Chạy chương trình
-
-#### Sử dụng Command Line (CLI)
+**Cách 2: Quét trực tiếp bằng đường dẫn**
+Bạn có thể bỏ qua menu và truyền trực tiếp đường dẫn file ZIP hoặc thư mục bất kỳ từ bên ngoài qua terminal:
 ```bash
-python extract_gemini.py
+python cccd_ocr_tool\main.py "C:\Users\Name\Downloads\DuLieuCCCD.zip"
 ```
 
-### Các tính năng bổ sung
+## 📊 Kết quả đầu ra
 
-  
+1. **File Excel tổng hợp (`cccd_extract.xlsx`)**: Chứa toàn bộ các thông tin đã trích xuất gồm (Họ tên, Số CCCD, Ngày sinh, Giới tính, Nơi thường trú, Ngày hết hạn...). File Excel sẽ được xuất ngay bên cạnh các folder con.
+2. **Chuẩn hóa thư mục**: Bên trong thư mục của từng người, bạn sẽ thấy tool tự đổi tên 2 bức ảnh (hoặc ảnh xuất ra từ PDF) đúng nhất thành `front.jpg` và `back.jpg`. Các ảnh lấy từ PDF thừa sẽ bị xóa tự động.
+3. **Ghi chú (`ocr_note.txt`)**: Mỗi thư mục con sẽ có một file text ghi lại dữ liệu được lưu, kèm thông báo lỗi nếu ảnh bị nhòe không đọc được thông tin.
 
-#### Test proxy
-```bash
-python test_proxy.py
-```
-
-#### Test checkpoint system
-```bash
-python test_checkpoint.py
-```
-
-#### Test API keys exhausted logic
-```bash
-python test_api_keys_exhausted.py
-```
-
-## ⚙️ Cấu hình
-
-### Test Mode
-Trong `extract_gemini.py`, thay đổi:
-```python
-TEST_MODE = True  # Chỉ xử lý 5 folder đầu tiên
-```
-
-### Checkpoint
-Tiến trình được lưu tự động bằng file `checkpoint.json` trong CLI
-
-## 🔧 Troubleshooting
-
-### Lỗi "Thư mục không tồn tại"
-- Đảm bảo đã tạo các thư mục: `Input_file/`, `extracted_all/`, `Excel/`
-- Chạy lệnh tạo thư mục như hướng dẫn ở trên
-
-### Lỗi "Không tìm thấy file ZIP"
-- Đặt file ZIP vào thư mục `Input_file/`
-- Kiểm tra tên file và định dạng (.zip)
-
-### Lỗi API quota
-- Thêm nhiều API keys vào `api_keys.txt`
-- Hệ thống tự động chuyển đổi API keys khi hết quota
-- Khi tất cả keys hết quota, có 4 tùy chọn xử lý:
-  1. Chờ reset quota (00:00 UTC)
-  2. Thêm API keys mới
-  3. Lưu tiến độ và thoát
-  4. Tạm dừng và thử lại sau
-
-### Lỗi số CCCD thiếu
-- Hệ thống sẽ cảnh báo và gợi ý retry
-- Kiểm tra chất lượng ảnh đầu vào
-
-### Lỗi kết nối
-- Kiểm tra internet connection
-- Thử lại sau vài phút
-
-### Lỗi "Permission denied"
-- Đảm bảo có quyền ghi vào thư mục
-- Chạy với quyền administrator nếu cần
-
-## 📊 Kết quả
-
-Hệ thống sẽ tạo file Excel với các cột:
-- CCCD
-- HoTen
-- NgaySinh
-- GioiTinh
-- DiaChi
-- NoiCap
-- NgayCap
-- NgayHetHan
-
-## 🤝 Đóng góp
-
-Mọi đóng góp đều được chào đón! Vui lòng:
-1. Fork project
-2. Tạo feature branch
-3. Commit changes
-4. Push to branch
-5. Tạo Pull Request
-
-## 📄 License
-
-MIT License - xem file LICENSE để biết thêm chi tiết.
-
-## 📞 Hỗ trợ
-
-Nếu gặp vấn đề, vui lòng tạo issue trên GitHub hoặc liên hệ qua email.
-
----
-
-**Lưu ý**: Đảm bảo tuân thủ quy định pháp luật về bảo mật thông tin cá nhân khi sử dụng hệ thống này. 
+## ⚙️ Lưu ý
+- API Gemini miễn phí hiện tại cho phép 15 request / phút hoặc ít hơn tùy thời điểm. Tool đã được thiết kế gộp (batch) toàn bộ ảnh của một người vào 1 request duy nhất để tối ưu hóa quota. Nếu bạn thấy tool dừng lại báo "Đang đợi 10s...", đó là do đã chạm ngưỡng limit, nó sẽ tự động chạy tiếp.

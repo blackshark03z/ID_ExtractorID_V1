@@ -51,6 +51,8 @@ working_proxies.txt
 extracted_all/
 Excel/
 Input_file/
+input/
+result/
 
 # Test files
 test_*.py 
