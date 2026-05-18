@@ -2,11 +2,27 @@ import os
 import sys
 import argparse
 import shutil
+import unicodedata
 from datetime import datetime
 from config import FRONT_IMAGE_NAME, BACK_IMAGE_NAME, OCR_NOTE_NAME, EXCEL_OUTPUT_NAME
 from excel_export import create_excel_report
 from pdf_utils import extract_images_from_pdf
 from gemini_utils import init_gemini, process_with_gemini
+
+def normalize_folder_name(name):
+    """
+    Converts a Vietnamese name to uppercase ASCII without diacritics.
+    E.g. 'Nguyễn Văn An' -> 'NGUYEN VAN AN'
+    """
+    if not name:
+        return ""
+    # Decompose unicode characters (NFD): tách ký tự + dấu thành 2 code points riêng
+    nfkd = unicodedata.normalize('NFD', name)
+    # Giữ lại chỉ các ký tự không phải combining (tức là bỏ dấu)
+    ascii_str = ''.join(c for c in nfkd if not unicodedata.combining(c))
+    # Viết hoa và bỏ khoảng trắng thừa
+    return ' '.join(ascii_str.upper().split())
+
 
 def is_expired(ngayhethan_str):
     """
@@ -308,6 +324,28 @@ def main():
         
         parsed_data, status = process_folder(folder_path, force_rescan=force_rescan)
         
+        # --- TỰ ĐỘNG ĐỔI TÊN THƯ MỤC THEO HỌ TÊN TRÊN CCCD ---
+        ho_ten = parsed_data.get("HoTen", "")
+        expected_name = normalize_folder_name(ho_ten)
+        current_name = normalize_folder_name(folder_name)
+        
+        if expected_name and expected_name != current_name:
+            new_folder_path = os.path.join(os.path.dirname(folder_path), expected_name)
+            try:
+                # Nếu tên đích đã tồn tại, thêm hậu tố để tránh xung đột
+                if os.path.exists(new_folder_path) and os.path.abspath(new_folder_path) != os.path.abspath(folder_path):
+                    suffix = 1
+                    while os.path.exists(f"{new_folder_path}_{suffix}"):
+                        suffix += 1
+                    new_folder_path = f"{new_folder_path}_{suffix}"
+                os.rename(folder_path, new_folder_path)
+                print(f"  [RENAME] '{folder_name}' -> '{os.path.basename(new_folder_path)}'")
+                folder_path = new_folder_path
+                parsed_data["FolderName"] = os.path.basename(new_folder_path)
+            except Exception as e:
+                print(f"  [RENAME] Lỗi khi đổi tên thư mục: {e}")
+        # --------------------------------------------------------
+
         # Check expired
         ngay_het_han = parsed_data.get("NgayHetHan", "")
         if is_expired(ngay_het_han):
