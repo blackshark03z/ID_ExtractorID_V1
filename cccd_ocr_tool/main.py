@@ -81,8 +81,9 @@ def process_folder(folder_path, force_rescan=False):
                         k, v = line.split(":", 1)
                         parsed_data[k.strip()] = v.strip()
             
-            # Check valid parsing (ít nhất phải có CCCD)
-            if "CCCD" in parsed_data:
+            # Check valid parsing (đầy đủ 4 trường bắt buộc: CCCD, HoTen, NgaySinh, DiaChi)
+            has_min_fields = all(str(parsed_data.get(f) or "").strip() for f in ["CCCD", "HoTen", "NgaySinh", "DiaChi"])
+            if has_min_fields:
                 print("    -> [CHECKPOINT] Đã quét trước đó, tải dữ liệu từ cache.")
                 # Giả lập status OK
                 status = {"front": "OK", "back": "OK"}
@@ -96,6 +97,14 @@ def process_folder(folder_path, force_rescan=False):
     # Đưa ảnh front/back rời vào trước (để chiếm index 0 và 1)
     if os.path.exists(std_front): image_paths.append(std_front)
     if os.path.exists(std_back): image_paths.append(std_back)
+    
+    # Tìm các file ảnh khác có sẵn trong thư mục
+    for f in os.listdir(folder_path):
+        f_lower = f.lower()
+        if f_lower.endswith(('.jpg', '.jpeg', '.png')):
+            full_path = os.path.join(folder_path, f)
+            if f != FRONT_IMAGE_NAME and f != BACK_IMAGE_NAME and not f_lower.endswith('_backup.jpg') and not f_lower.startswith('extracted_pdf_'):
+                image_paths.append(full_path)
     
     # Tìm và trích xuất ảnh từ PDF
     pdfs = [os.path.join(folder_path, f) for f in os.listdir(folder_path) if f.lower().endswith('.pdf')]
@@ -164,7 +173,19 @@ def process_folder(folder_path, force_rescan=False):
     if not parsed_data.get("NgayCap"): notes.append("KHONG DOC RO NGAY CAP")
         
     parsed_data["GhiChu"] = "; ".join(notes)
-    generate_ocr_note(folder_path, parsed_data)
+    
+    # Chỉ lưu checkpoint khi trích xuất đủ 4 trường tối thiểu: CCCD, HoTen, NgaySinh, DiaChi
+    has_min_fields = all(str(parsed_data.get(f) or "").strip() for f in ["CCCD", "HoTen", "NgaySinh", "DiaChi"])
+    if has_min_fields:
+        generate_ocr_note(folder_path, parsed_data)
+    else:
+        print("    -> [CẢNH BÁO] Thiếu trường bắt buộc (CCCD/HoTen/NgaySinh/DiaChi). Không lưu checkpoint.")
+        # Xóa file note cũ nếu có để tránh lần sau lại đọc nhầm
+        if os.path.exists(note_path):
+            try:
+                os.remove(note_path)
+            except Exception as e:
+                print(f"      Không thể xóa file note cũ không hợp lệ: {e}")
     
     return parsed_data, status
 
@@ -324,6 +345,13 @@ def main():
         
         parsed_data, status = process_folder(folder_path, force_rescan=force_rescan)
         
+        # Kiểm tra điều kiện tối thiểu 4 trường: CCCD, HoTen, NgaySinh, DiaChi
+        has_min_fields = all(str(parsed_data.get(f) or "").strip() for f in ["CCCD", "HoTen", "NgaySinh", "DiaChi"])
+        if not has_min_fields:
+            missing_fields = [f for f in ["CCCD", "HoTen", "NgaySinh", "DiaChi"] if not str(parsed_data.get(f) or "").strip()]
+            print(f"  [BỎ QUA] Thư mục '{folder_name}' không trích xuất đủ 4 trường bắt buộc (thiếu: {', '.join(missing_fields)}). Không ghi ra Excel.")
+            continue
+            
         # --- TỰ ĐỘNG ĐỔI TÊN THƯ MỤC THEO HỌ TÊN TRÊN CCCD ---
         ho_ten = parsed_data.get("HoTen", "")
         expected_name = normalize_folder_name(ho_ten)
