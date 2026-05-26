@@ -1,0 +1,243 @@
+KIEM TRA FOLDER BI THIEU ANH
+Thu muc goc: D:\ID_Extractor-1\input\500 p1_extracted\500 p1
+Tong folder: 402
+
+OK (du front + back): 364
+Thieu anh nhung co PDF (se tu sua): 38
+Thieu anh, khong co PDF (can thu cong): 0
+Hoan toan trong: 0
+
+=== FOLDER THIEU ANH NHUNG CO PDF (TU SUA KHI CHAY LAI) ===
+
+6031069
+  has_front: False, has_back: True
+  anh roi: ['extracted_pdf_cc_huy_0_0.jpeg', 'extracted_pdf_cc_huy_1_0.jpeg', 'extracted_pdf_honh_huy_0_0.jpeg']
+  PDF 'cc huy.pdf': 2 anh
+  PDF 'honh huy.pdf': 1 anh
+  Tong anh san co: 7
+
+6066287
+  has_front: False, has_back: True
+  PDF '6066287 TRƯƠNG CÔNG PHÁT-CC.pdf': 2 anh
+  PDF '6066287 TRƯƠNG CÔNG PHÁT-HINH.pdf': 1 anh
+  Tong anh san co: 4
+
+6066816
+  has_front: False, has_back: True
+  PDF '6066816-CCCD-NGUYỄN THỊ KIM THOA.pdf': 2 anh
+  PDF '6066816-HA-NGUYỄN THỊ KIM THOA.pdf': 1 anh
+  Tong anh san co: 4
+
+6066886
+  has_front: False, has_back: True
+  PDF 'NGUYEN THANH HAN-CCCD.pdf': 2 anh
+  PDF 'NGUYEN THANH HAN-HINH.pdf': 1 anh
+  Tong anh san co: 4
+
+6066894
+  has_front: False, has_back: True
+  PDF 'CamScanner 01-20-2022 10.40(1).pdf': 2 anh
+  PDF 'CamScanner 01-20-2022 10.40.pdf': 1 anh
+  Tong anh san co: 4
+
+6067692
+  has_front: False, has_back: False
+  PDF '6067692-CCCD-NGUYỄN QUANG HUY.pdf': 2 anh
+  PDF '6067692-GPLX-NGUYỄN QUANG HUY.pdf': 2 anh
+  PDF '6067692-HÌNH-NGUYỄN QUANG HUY.pdf': 1 anh
+  Tong anh san co: 5
+
+6067765
+  has_front: False, has_back: True
+  PDF '6067765-ĐỖ XUÂN THỊNH-CCCD.pdf': 2 anh
+  PDF '6067765-ĐỖ XUÂN THỊNH-HÌNH.pdf': 1 anh
+  Tong anh san co: 4
+
+6068143
+  has_front: False, has_back: True
+  PDF 'cccd tran quang truong.pdf': 2 anh
+  PDF 'hk tran quang truong.pdf': 1 anh
+  Tong anh san co: 4
+
+6068541
+  has_front: False, has_back: True
+  PDF 'TRAN THANH TA-CC.pdf': 2 anh
+  PDF 'TRAN THANH TA-HINH.pdf': 1 anh
+  Tong anh san co: 4
+
+6078065
+  has_front: False, has_back: True
+  PDF '6078065-CCCD-NGUYỄN NGỌC LINH.pdf': 2 anh
+  PDF '6078065-HA-NGUYỄN NGỌC LINH.pdf': 1 anh
+  Tong anh san co: 4
+
+6087461
+  has_front: False, has_back: True
+  PDF '6087461_CCCD_TRẦN THỊ MỸ DUNG.pdf': 2 anh
+  PDF '6087461_HÌNH_TRẦN THỊ MỸ DUNG.pdf': 1 anh
+  Tong anh san co: 4
+
+6089269
+  has_front: False, has_back: True
+  PDF 'cccd phạm thu trang.pdf': 2 anh
+  PDF 'ảnh lê trang.pdf': 1 anh
+  Tong anh san co: 4
+
+6089313
+  has_front: False, has_back: True
+  PDF '6089313_CCCD_NGUYỄN VĂN CU.pdf': 2 anh
+  PDF '6089313_HÌNH_NGUYỄN VĂN CU.pdf': 1 anh
+  Tong anh san co: 4
+
+6089453
+  has_front: False, has_back: True
+  PDF 'cccd tám.pdf': 4 anh
+  PDF 'ảnh tám.pdf': 2 anh
+  Tong anh san co: 7
+
+6089717
+  has_front: False, has_back: True
+  PDF 'NGUYỄN TRUYỀN_CCCD.pdf': 2 anh
+  PDF 'NGUYỄN TRUYỀN_HÌNH.pdf': 1 anh
+  Tong anh san co: 4
+
+6090356
+  has_front: True, has_back: False
+  PDF '6090356-CCCD- NGUYỄN THỊ XUÂN HẢO.pdf': 4 anh
+  PDF '6090356-HÌNH-NGUYỄN THỊ XUÂN HẢO.pdf': 2 anh
+  Tong anh san co: 7
+
+6091149
+  has_front: False, has_back: True
+  PDF 'CCCD_RO PHI ÁH.pdf': 2 anh
+  PDF 'ẢNH_RO PHI ÁH.pdf': 1 anh
+  Tong anh san co: 4
+
+6091187
+  has_front: False, has_back: True
+  PDF 'Doc 01-22-2022 12-34-16.pdf': 2 anh
+  PDF 'Doc 01-22-2022 12-34-55.pdf': 1 anh
+  Tong anh san co: 4
+
+6091271
+  has_front: False, has_back: True
+  PDF '6091271_CCCD_PHẠM THỊ XUÂN.pdf': 2 anh
+  PDF '6091271_HÌNH_PHẠM THỊ XUÂN.pdf': 1 anh
+  Tong anh san co: 4
+
+6091383
+  has_front: False, has_back: True
+  PDF 'CCCD_ BÀN THỊ LOAN.pdf': 2 anh
+  PDF 'ẢNH _ BÀN THỊ LOAN.pdf': 1 anh
+  Tong anh san co: 4
+
+6091510
+  has_front: False, has_back: True
+  PDF '6091510-ĐỨC-CCCD.pdf': 2 anh
+  PDF '6091510-ĐỨC-ẢNH.pdf': 1 anh
+  Tong anh san co: 4
+
+6091641
+  has_front: False, has_back: True
+  PDF 'HUY-CCCD.pdf': 2 anh
+  PDF 'HUY-HINH.pdf': 1 anh
+  Tong anh san co: 4
+
+6091736
+  has_front: False, has_back: False
+  anh roi: ['HA NAM.jpg']
+  PDF '1 NAM.pdf': 2 anh
+  PDF '11 NAM.pdf': 2 anh
+  Tong anh san co: 5
+
+6092010
+  has_front: False, has_back: True
+  PDF 'CCCD CHỨA.pdf': 2 anh
+  PDF 'hình chứa.pdf': 1 anh
+  Tong anh san co: 4
+
+6092171
+  has_front: False, has_back: True
+  PDF '6092171_trần thị tường vi_cccd.pdf': 2 anh
+  PDF '6092171_trần thị tường vi_hình.pdf': 1 anh
+  Tong anh san co: 4
+
+6092314
+  has_front: False, has_back: False
+  PDF 'phạm duy hùng - cmnd.pdf': 2 anh
+  PDF 'phạm duy hùng - hk.pdf': 1 anh
+  Tong anh san co: 3
+
+6092315
+  has_front: False, has_back: True
+  PDF 'NGUYEN THỊ PHUONG NGHI-CC.pdf': 2 anh
+  PDF 'NGUYEN THỊ PHUONG NGHI-HINHHHHH.pdf': 1 anh
+  Tong anh san co: 4
+
+6092622
+  has_front: False, has_back: True
+  PDF 'cccd tanh (1).pdf': 2 anh
+  PDF 'hakh tanh (2).pdf': 1 anh
+  Tong anh san co: 4
+
+6093022
+  has_front: False, has_back: True
+  PDF 'cccdtran bảo huyền.pdf': 2 anh
+  PDF 'ảnh trần bảo huyền.pdf': 1 anh
+  Tong anh san co: 4
+
+6093076
+  has_front: False, has_back: False
+  anh roi: ['6093076-ANH- H RIM NIÊ.jpg']
+  PDF '6093076-CCCD- H RIM NIÊ.pdf': 2 anh
+  PDF '6093076-GPLX- H RIM NIÊ.pdf': 2 anh
+  Tong anh san co: 5
+
+6093121
+  has_front: False, has_back: True
+  PDF 'Doc 01-22-2022 14-59-03.pdf': 2 anh
+  PDF 'Doc 01-22-2022 15-02-13.pdf': 1 anh
+  Tong anh san co: 4
+
+6093130
+  has_front: False, has_back: True
+  PDF 'CCCD_THỊ BẨN.pdf': 2 anh
+  PDF 'ẢNH_THỊ BẨN.pdf': 1 anh
+  Tong anh san co: 4
+
+6093168
+  has_front: False, has_back: True
+  PDF 'TRAN KIM LAM-CC.pdf': 2 anh
+  PDF 'TRAN KIM LAM-HINH.pdf': 1 anh
+  Tong anh san co: 4
+
+6093171
+  has_front: False, has_back: True
+  PDF 'CamScanner 01-22-2022 15.01.pdf': 2 anh
+  PDF 'CamScanner 01-22-2022 15.09.pdf': 1 anh
+  Tong anh san co: 4
+
+6093470
+  has_front: False, has_back: True
+  PDF 'PHẠM THỊ MƠ-CCCD.pdf': 4 anh
+  PDF 'PHẠM THỊ MƠ-HINH.pdf': 2 anh
+  Tong anh san co: 7
+
+6093645
+  has_front: False, has_back: True
+  PDF 'cccd nan.pdf': 4 anh
+  PDF 'ảnh nan.pdf': 2 anh
+  Tong anh san co: 7
+
+6093654
+  has_front: False, has_back: False
+  PDF 'cccd_hoàng văn tuân.pdf': 4 anh
+  PDF 'gplx_hoàng văn tuân.pdf': 4 anh
+  PDF 'Ảnh_hoàng văn tuân.pdf': 2 anh
+  Tong anh san co: 10
+
+6093917
+  has_front: False, has_back: True
+  PDF 'NGÔ THỊ XINH-CCCD.pdf': 4 anh
+  PDF 'NGÔ THỊ XINH-HINH.pdf': 2 anh
+  Tong anh san co: 7
