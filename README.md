@@ -4,10 +4,12 @@ Công cụ tự động hóa việc nhận diện và trích xuất thông tin C
 
 ## 🌟 Tính năng nổi bật
 
-- **Nhận diện chính xác**: Không bị nhầm lẫn giữa chữ O/Q hay số 0 như các tool truyền thống.
-- **Tự động trích xuất từ PDF**: Hỗ trợ nhận diện các file PDF chứa ảnh scan thẻ CCCD. Tool tự động moi ảnh ra từ PDF.
+- **Nhận diện chính xác**: Không bị nhầm lẫn giữa chữ O/Q hay số 0 như các tool truyền thống. Tuyệt đối không lấy nhầm tên người ký (Cục trưởng) ở mặt sau làm tên chủ thẻ.
+- **Quét đệ quy thông minh**: Tự động duyệt đệ quy ở mọi cấp độ thư mục con để tìm ra các thư mục trực tiếp chứa ảnh/PDF thực tế của từng cá nhân. Tự động bỏ qua các thư mục backup, copy, temp để tránh quét trùng lặp dữ liệu.
+- **Tự động trích xuất từ PDF**: Hỗ trợ nhận diện các file PDF chứa ảnh scan thẻ CCCD (kể cả PDF nhiều trang chứa hợp đồng và CCCD xen kẽ). Tool tự động trích xuất các trang thành ảnh có độ phân giải cao để gửi đi xử lý.
+- **Tránh trùng lặp tên file (Zero Collision)**: Cơ chế tạo slug thông minh không giới hạn độ dài giúp giải nén đồng thời nhiều file PDF có chung tiền tố dài trong cùng một thư mục mà không bị ghi đè dữ liệu.
 - **Tự động ghép cặp & đổi tên**: Thông minh nhận biết đâu là mặt trước, đâu là mặt sau từ một mớ hỗn độn (nhiều ảnh trong 1 folder, hoặc file PDF) và tự động chuẩn hóa đổi tên thành `front.jpg` và `back.jpg`.
-- **Đọc trực tiếp file ZIP**: Không cần giải nén thủ công! Chỉ cần ném file `.zip` chứa các folder con vào thư mục `input`, tool sẽ tự bung nén, tìm thư mục gốc và xử lý toàn bộ.
+- **Đọc trực tiếp file ZIP**: Không cần giải nén thủ công! Chỉ cần ném file `.zip` chứa các folder con vào thư mục `input`, tool sẽ tự bung nén và tìm ra các thư mục con chứa dữ liệu một cách tối ưu.
 - **Xoay vòng API Key**: Hỗ trợ cung cấp nhiều API Key cùng lúc để tránh việc bị Google giới hạn rate limit (chống sập tool giữa chừng do quá tải).
 
 ## 📋 Yêu cầu hệ thống

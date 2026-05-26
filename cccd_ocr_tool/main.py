@@ -203,6 +203,40 @@ def process_folder(folder_path, force_rescan=False):
 
 import zipfile
 
+def find_person_folders(root_path):
+    """
+    Finds all subdirectories under root_path that contain at least one image or PDF file.
+    Avoids folders containing system/backup patterns in their names.
+    """
+    person_folders = []
+    for dirpath, dirnames, filenames in os.walk(root_path):
+        parts = os.path.normpath(dirpath).split(os.sep)
+        
+        # Skip system, git, result, or tool folders
+        if any(p in ["cccd_ocr_tool", "result", ".git", ".gemini", "__pycache__"] for p in parts):
+            continue
+            
+        # Skip any path containing backup, copy, temp (case-insensitive)
+        if any("backup" in p.lower() or "copy" in p.lower() or "temp" in p.lower() for p in parts):
+            continue
+            
+        # Check if the directory directly contains any media files
+        has_media = False
+        for f in filenames:
+            f_lower = f.lower()
+            if f_lower.endswith(('.jpg', '.jpeg', '.png', '.pdf')):
+                if f_lower == OCR_NOTE_NAME.lower() or f_lower == EXCEL_OUTPUT_NAME.lower():
+                    continue
+                if f_lower.endswith('_backup.jpg') or f_lower.startswith('extracted_pdf_'):
+                    continue
+                has_media = True
+                break
+                
+        if has_media:
+            person_folders.append(dirpath)
+            
+    return person_folders
+
 def find_data_root(extracted_path):
     """
     Finds the actual directory containing the person folders.
@@ -268,14 +302,14 @@ def main():
             
         if choice_idx == 0:
             root_folder = input_dir
-            subfolders_to_process = [item["path"] for item in menu_items if item["type"] == "dir"]
+            subfolders_to_process = find_person_folders(input_dir)
         else:
             selected_item = menu_items[choice_idx - 1]
             if selected_item["type"] == "zip":
                 target_path = selected_item["path"]
             else:
-                root_folder = input_dir
-                subfolders_to_process = [selected_item["path"]]
+                root_folder = selected_item["path"]
+                subfolders_to_process = find_person_folders(root_folder)
                 
     # Xử lý nếu target_path là file ZIP (nhập qua arg hoặc chọn từ menu)
     if target_path and target_path.lower().endswith('.zip'):
@@ -298,19 +332,12 @@ def main():
             
         root_folder = find_data_root(extract_dir)
         print(f"Đã xác định thư mục chứa dữ liệu: {root_folder}")
-        
-        for item in os.listdir(root_folder):
-            item_path = os.path.join(root_folder, item)
-            if os.path.isdir(item_path) and item not in ["cccd_ocr_tool", "result", ".git", ".gemini"]:
-                subfolders_to_process.append(item_path)
+        subfolders_to_process = find_person_folders(root_folder)
                 
     # Xử lý nếu target_path là thư mục truyền trực tiếp
     elif target_path and os.path.isdir(target_path):
         root_folder = os.path.abspath(target_path)
-        for item in os.listdir(root_folder):
-            item_path = os.path.join(root_folder, item)
-            if os.path.isdir(item_path) and item not in ["cccd_ocr_tool", "result", ".git", ".gemini"]:
-                subfolders_to_process.append(item_path)
+        subfolders_to_process = find_person_folders(root_folder)
                 
     # Sắp xếp theo tên Alphabet để thứ tự quét không bị nhảy lộn xộn
     subfolders_to_process.sort()
