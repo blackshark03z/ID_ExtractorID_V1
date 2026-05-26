@@ -1,5 +1,9 @@
 import os
 import sys
+
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+
 import argparse
 import shutil
 import unicodedata
@@ -125,6 +129,14 @@ def process_folder(folder_path, force_rescan=False):
         for p in pdf_images:
             try: os.remove(p)
             except: pass
+        
+        # Ngừng toàn bộ chương trình nếu lỗi do API Key chết (tránh lặp lại lỗi cho hàng trăm thư mục)
+        if "403" in data["error"] or "API Key" in data["error"]:
+            print(f"\n[!!! LỖI NGHIÊM TRỌNG] {data['error']}")
+            print("Vui lòng thay API Key mới vào file api_keys.txt rồi chạy lại tool.")
+            import sys
+            sys.exit(1)
+            
         return {"GhiChu": f"GEMINI ERROR: {data['error']}"}, {"front": "ERROR", "back": "ERROR"}
         
     front_path_resolved = data.pop("front_path", None)
